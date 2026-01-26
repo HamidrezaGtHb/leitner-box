@@ -7,8 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
-import { Save, Key, Target, Palette } from 'lucide-react';
+import { Save, Key, Target, Palette, CheckCircle2, XCircle } from 'lucide-react';
 import { useTheme } from 'next-themes';
+import { validateApiKey } from '@/lib/ai-agent';
 
 const DAILY_LIMITS = [5, 10, 15] as const;
 
@@ -30,12 +31,24 @@ export default function SettingsPage() {
 
   const handleSaveApiKey = () => {
     if (typeof window !== 'undefined') {
+      // Validate before saving
+      if (!validateApiKey(provider, apiKey)) {
+        alert(
+          provider === 'openai'
+            ? 'Invalid OpenAI API key. It should start with "sk-"'
+            : 'Invalid Gemini API key. It should start with "AIza" and be at least 35 characters long.'
+        );
+        return;
+      }
+      
       localStorage.setItem('ai_api_key', apiKey);
       localStorage.setItem('ai_provider', provider);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
   };
+
+  const isKeyValid = apiKey ? validateApiKey(provider, apiKey) : null;
 
   if (!isLoaded) {
     return (
@@ -99,21 +112,43 @@ export default function SettingsPage() {
                 <label className="text-sm font-medium">
                   {provider === 'openai' ? 'OpenAI' : 'Gemini'} API Key
                 </label>
-                <Input
-                  type="password"
-                  placeholder={
-                    provider === 'openai'
-                      ? 'sk-...'
-                      : 'Your Gemini API key'
-                  }
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                />
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder={
+                      provider === 'openai'
+                        ? 'sk-...'
+                        : 'AIzaSy...'
+                    }
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className={
+                      isKeyValid === false
+                        ? 'border-red-500'
+                        : isKeyValid === true
+                        ? 'border-green-500'
+                        : ''
+                    }
+                  />
+                  {isKeyValid === true && (
+                    <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-green-500" />
+                  )}
+                  {isKeyValid === false && (
+                    <XCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {provider === 'openai'
-                    ? 'Get your API key from platform.openai.com'
-                    : 'Get your API key from ai.google.dev'}
+                    ? 'Get your API key from platform.openai.com (starts with "sk-")'
+                    : 'Get your API key from ai.google.dev (starts with "AIza")'}
                 </p>
+                {isKeyValid === false && (
+                  <p className="text-xs text-red-500">
+                    {provider === 'openai'
+                      ? '⚠️ Invalid format. OpenAI keys start with "sk-"'
+                      : '⚠️ Invalid format. Gemini keys start with "AIza"'}
+                  </p>
+                )}
               </div>
 
               <Button onClick={handleSaveApiKey} className="w-full gap-2">

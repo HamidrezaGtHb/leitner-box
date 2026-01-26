@@ -99,10 +99,17 @@ async function callGemini(word: string, apiKey: string): Promise<AIWordResponse>
   );
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.statusText}`);
+    const errorData = await response.json().catch(() => ({}));
+    const errorMessage = errorData.error?.message || response.statusText;
+    throw new Error(`Gemini API error: ${errorMessage}. Please check your API key in Settings.`);
   }
 
   const data = await response.json();
+  
+  if (!data.candidates || !data.candidates[0]?.content?.parts?.[0]?.text) {
+    throw new Error('Invalid response from Gemini API. Please try again.');
+  }
+  
   const content = data.candidates[0].content.parts[0].text;
   return JSON.parse(content);
 }
@@ -160,6 +167,7 @@ export function validateApiKey(provider: 'openai' | 'gemini', key: string): bool
   if (provider === 'openai') {
     return key.startsWith('sk-');
   } else {
-    return key.length > 20; // Basic validation for Gemini
+    // Gemini keys start with "AIza" and are typically 39 characters
+    return key.startsWith('AIza') && key.length >= 35;
   }
 }
