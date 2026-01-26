@@ -74,7 +74,7 @@ async function callOpenAI(word: string, apiKey: string): Promise<AIWordResponse>
  */
 async function callGemini(word: string, apiKey: string): Promise<AIWordResponse> {
   const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: {
@@ -92,7 +92,6 @@ async function callGemini(word: string, apiKey: string): Promise<AIWordResponse>
         ],
         generationConfig: {
           temperature: 0.3,
-          responseMimeType: 'application/json',
         },
       }),
     }
@@ -110,8 +109,17 @@ async function callGemini(word: string, apiKey: string): Promise<AIWordResponse>
     throw new Error('Invalid response from Gemini API. Please try again.');
   }
   
-  const content = data.candidates[0].content.parts[0].text;
-  return JSON.parse(content);
+  let content = data.candidates[0].content.parts[0].text;
+  
+  // Remove markdown code blocks if present (```json ... ```)
+  content = content.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+  
+  try {
+    return JSON.parse(content);
+  } catch (parseError) {
+    console.error('Failed to parse Gemini response:', content);
+    throw new Error('Failed to parse response from Gemini. The AI returned invalid JSON.');
+  }
 }
 
 /**
