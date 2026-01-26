@@ -3,52 +3,33 @@
 import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/use-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Save, Key, Target, Palette, CheckCircle2, XCircle } from 'lucide-react';
+import { Bot, Target, Palette, CheckCircle2 } from 'lucide-react';
 import { useTheme } from 'next-themes';
-import { validateApiKey } from '@/lib/ai-agent';
 
 const DAILY_LIMITS = [5, 10, 15] as const;
 
 export default function SettingsPage() {
   const { settings, updateSettings, isLoaded } = useSettings();
   const { theme, setTheme } = useTheme();
-  const [apiKey, setApiKey] = useState('');
-  const [provider, setProvider] = useState<'openai' | 'gemini'>('openai');
+  const [provider, setProvider] = useState<'openai' | 'gemini'>('gemini');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('ai_api_key') || '';
-      const storedProvider = (localStorage.getItem('ai_provider') || 'openai') as 'openai' | 'gemini';
-      setApiKey(storedKey);
+      const storedProvider = (localStorage.getItem('ai_provider') || 'gemini') as 'openai' | 'gemini';
       setProvider(storedProvider);
     }
   }, []);
 
-  const handleSaveApiKey = () => {
+  const handleSaveProvider = () => {
     if (typeof window !== 'undefined') {
-      // Validate before saving
-      if (!validateApiKey(provider, apiKey)) {
-        alert(
-          provider === 'openai'
-            ? 'Invalid OpenAI API key. It should start with "sk-"'
-            : 'Invalid Gemini API key. It should start with "AIza" and be at least 35 characters long.'
-        );
-        return;
-      }
-      
-      localStorage.setItem('ai_api_key', apiKey);
       localStorage.setItem('ai_provider', provider);
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     }
   };
-
-  const isKeyValid = apiKey ? validateApiKey(provider, apiKey) : null;
 
   if (!isLoaded) {
     return (
@@ -65,11 +46,11 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Customize your learning experience</p>
       </div>
 
-      <Tabs defaultValue="api" className="w-full">
+      <Tabs defaultValue="provider" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="api" className="gap-2">
-            <Key className="h-4 w-4" />
-            API Key
+          <TabsTrigger value="provider" className="gap-2">
+            <Bot className="h-4 w-4" />
+            AI Provider
           </TabsTrigger>
           <TabsTrigger value="learning" className="gap-2">
             <Target className="h-4 w-4" />
@@ -81,79 +62,59 @@ export default function SettingsPage() {
           </TabsTrigger>
         </TabsList>
 
-        {/* API Settings */}
-        <TabsContent value="api" className="space-y-4">
+        {/* AI Provider Settings */}
+        <TabsContent value="provider" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>AI Provider</CardTitle>
               <CardDescription>
-                Choose your AI provider for word enrichment
+                Choose your preferred AI provider for word enrichment
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex gap-4">
-                <Button
-                  variant={provider === 'openai' ? 'default' : 'outline'}
-                  onClick={() => setProvider('openai')}
-                  className="flex-1"
-                >
-                  OpenAI
-                </Button>
                 <Button
                   variant={provider === 'gemini' ? 'default' : 'outline'}
                   onClick={() => setProvider('gemini')}
                   className="flex-1"
                 >
                   Gemini
+                  {provider === 'gemini' && (
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant={provider === 'openai' ? 'default' : 'outline'}
+                  onClick={() => setProvider('openai')}
+                  className="flex-1"
+                >
+                  OpenAI
+                  {provider === 'openai' && (
+                    <CheckCircle2 className="ml-2 h-4 w-4" />
+                  )}
                 </Button>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  {provider === 'openai' ? 'OpenAI' : 'Gemini'} API Key
-                </label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    placeholder={
-                      provider === 'openai'
-                        ? 'sk-...'
-                        : 'AIzaSy...'
-                    }
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    className={
-                      isKeyValid === false
-                        ? 'border-red-500'
-                        : isKeyValid === true
-                        ? 'border-green-500'
-                        : ''
-                    }
-                  />
-                  {isKeyValid === true && (
-                    <CheckCircle2 className="absolute right-3 top-3 h-4 w-4 text-green-500" />
-                  )}
-                  {isKeyValid === false && (
-                    <XCircle className="absolute right-3 top-3 h-4 w-4 text-red-500" />
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {provider === 'openai'
-                    ? 'Get your API key from platform.openai.com (starts with "sk-")'
-                    : 'Get your API key from ai.google.dev (starts with "AIza")'}
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <p className="text-sm font-medium">
+                  {provider === 'gemini' ? 'Google Gemini' : 'OpenAI GPT-4o-mini'}
                 </p>
-                {isKeyValid === false && (
-                  <p className="text-xs text-red-500">
-                    {provider === 'openai'
-                      ? '⚠️ Invalid format. OpenAI keys start with "sk-"'
-                      : '⚠️ Invalid format. Gemini keys start with "AIza"'}
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  {provider === 'gemini'
+                    ? 'Fast and efficient for language learning tasks. Good balance of speed and quality.'
+                    : 'High-quality responses with excellent language understanding.'}
+                </p>
               </div>
 
-              <Button onClick={handleSaveApiKey} className="w-full gap-2">
-                <Save className="h-4 w-4" />
-                {saved ? 'Saved!' : 'Save API Key'}
+              <Button onClick={handleSaveProvider} className="w-full gap-2">
+                {saved ? (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Saved!
+                  </>
+                ) : (
+                  'Save Preference'
+                )}
               </Button>
             </CardContent>
           </Card>

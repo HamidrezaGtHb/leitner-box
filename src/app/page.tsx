@@ -18,15 +18,12 @@ export default function HomePage() {
   const [word, setWord] = useState('');
   const [isEnriching, setIsEnriching] = useState(false);
   const [error, setError] = useState('');
-  const [apiKey, setApiKey] = useState('');
-  const [provider, setProvider] = useState<'openai' | 'gemini'>('openai');
+  const [provider, setProvider] = useState<'openai' | 'gemini'>('gemini');
 
-  // Load API key from localStorage
+  // Load provider preference from localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const storedKey = localStorage.getItem('ai_api_key') || '';
-      const storedProvider = (localStorage.getItem('ai_provider') || 'openai') as 'openai' | 'gemini';
-      setApiKey(storedKey);
+      const storedProvider = (localStorage.getItem('ai_provider') || 'gemini') as 'openai' | 'gemini';
       setProvider(storedProvider);
     }
   }, []);
@@ -40,11 +37,6 @@ export default function HomePage() {
       return;
     }
 
-    if (!apiKey.trim()) {
-      setError('Please enter your API key in Settings');
-      return;
-    }
-
     if (!canAddNewWord()) {
       setError(`Daily limit reached (${settings.dailyNewWords} words)`);
       return;
@@ -54,7 +46,7 @@ export default function HomePage() {
     setError('');
 
     try {
-      const wordData = await enrichWord(word.trim(), provider, apiKey);
+      const wordData = await enrichWord(word.trim(), provider);
       addWord(wordData);
       setWord('');
     } catch (err) {
@@ -86,31 +78,6 @@ export default function HomePage() {
         </p>
       </div>
 
-      {/* API Key Setup Prompt */}
-      {!apiKey && (
-        <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
-          <CardContent className="py-6">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
-                <Target className="h-5 w-5 text-blue-600 dark:text-blue-300" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                  Welcome! Let's get started
-                </h3>
-                <p className="text-sm text-blue-700 dark:text-blue-200 mb-3">
-                  To use AI-powered word enrichment, you need to configure your API key first.
-                </p>
-                <Link href="/settings">
-                  <Button variant="default" size="sm">
-                    Configure API Key
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
