@@ -68,7 +68,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>AI Provider</CardTitle>
               <CardDescription>
-                Choose your preferred AI provider for word enrichment
+                Select your preferred AI provider for word enrichment
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
