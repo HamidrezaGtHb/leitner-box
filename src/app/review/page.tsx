@@ -6,20 +6,28 @@ import { Flashcard } from '@/components/flashcard';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, BookOpen, Home as HomeIcon } from 'lucide-react';
+import { CheckCircle2, Home as HomeIcon } from 'lucide-react';
 import Link from 'next/link';
 
 export default function ReviewPage() {
   const { dueCards, reviewCard, isLoaded } = useLeitner();
+  const [reviewQueue, setReviewQueue] = useState<typeof dueCards>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [sessionStats, setSessionStats] = useState({ correct: 0, incorrect: 0 });
   const [isComplete, setIsComplete] = useState(false);
 
+  // Initialize review queue once when page loads
   useEffect(() => {
-    if (isLoaded && dueCards.length === 0) {
+    if (isLoaded && reviewQueue.length === 0 && dueCards.length > 0) {
+      setReviewQueue([...dueCards]);
+    }
+  }, [isLoaded, dueCards, reviewQueue.length]);
+
+  useEffect(() => {
+    if (isLoaded && dueCards.length === 0 && reviewQueue.length === 0) {
       setIsComplete(true);
     }
-  }, [isLoaded, dueCards]);
+  }, [isLoaded, dueCards, reviewQueue.length]);
 
   if (!isLoaded) {
     return (
@@ -29,7 +37,7 @@ export default function ReviewPage() {
     );
   }
 
-  if (isComplete || dueCards.length === 0) {
+  if (isComplete || (reviewQueue.length === 0 && dueCards.length === 0)) {
     return (
       <div className="max-w-2xl mx-auto">
         <Card className="text-center">
@@ -73,14 +81,20 @@ export default function ReviewPage() {
     );
   }
 
-  const currentCard = dueCards[currentIndex];
-  const progressPercent = ((currentIndex + 1) / dueCards.length) * 100;
+  const currentCard = reviewQueue[currentIndex];
+  const progressPercent = reviewQueue.length > 0 ? ((currentIndex + 1) / reviewQueue.length) * 100 : 100;
+
+  // Safety check - if no current card, show complete
+  if (!currentCard) {
+    setIsComplete(true);
+    return null;
+  }
 
   const handleCorrect = () => {
     reviewCard(currentCard.id, true);
     setSessionStats((prev) => ({ ...prev, correct: prev.correct + 1 }));
-    
-    if (currentIndex < dueCards.length - 1) {
+
+    if (currentIndex < reviewQueue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setIsComplete(true);
@@ -90,8 +104,8 @@ export default function ReviewPage() {
   const handleIncorrect = () => {
     reviewCard(currentCard.id, false);
     setSessionStats((prev) => ({ ...prev, incorrect: prev.incorrect + 1 }));
-    
-    if (currentIndex < dueCards.length - 1) {
+
+    if (currentIndex < reviewQueue.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
       setIsComplete(true);
@@ -106,7 +120,7 @@ export default function ReviewPage() {
           <div>
             <h1 className="text-3xl font-bold">Review Session</h1>
             <p className="text-muted-foreground">
-              Card {currentIndex + 1} of {dueCards.length}
+              Card {currentIndex + 1} of {reviewQueue.length}
             </p>
           </div>
           <div className="text-right">
