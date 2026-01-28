@@ -46,6 +46,8 @@ export interface LeitnerBox {
 export interface UserSettings {
   dailyNewWords: 5 | 10 | 15;
   theme: 'light' | 'dark' | 'system';
+  autoAddFromBacklog: boolean;
+  maxBacklogSize: number;
 }
 
 export interface Progress {
@@ -76,4 +78,17 @@ export interface AIWordResponse {
   prepositions?: string;
   meaning: string;
   examples: Example[];
+}
+
+// Backlog types
+export type BacklogSource = 'manual' | 'generated' | 'imported' | 'ocr';
+export type Priority = 'high' | 'medium' | 'low';
+
+export interface BacklogItem {
+  id: string;
+  wordData: WordData;
+  scheduledFor: number; // timestamp
+  priority: Priority;
+  source: BacklogSource;
+  createdAt: number;
 }

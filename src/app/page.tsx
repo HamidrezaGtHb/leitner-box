@@ -3,18 +3,20 @@
 import { useState, useEffect } from 'react';
 import { useLeitner } from '@/hooks/use-leitner';
 import { useSettings } from '@/hooks/use-settings';
+import { useBacklog } from '@/hooks/use-backlog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { WordCard } from '@/components/word-card';
 import { enrichWord } from '@/lib/ai-agent';
-import { PlusCircle, Loader2, BookOpen, Target, TrendingUp } from 'lucide-react';
+import { PlusCircle, Loader2, BookOpen, Target, TrendingUp, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HomePage() {
   const { cards, addWord, canAddNewWord, getProgress, dueCards, isLoaded } = useLeitner();
   const { settings } = useSettings();
+  const { readyItems, addToBacklog } = useBacklog();
   const [word, setWord] = useState('');
   const [isEnriching, setIsEnriching] = useState(false);
   const [error, setError] = useState('');
@@ -80,7 +82,7 @@ export default function HomePage() {
 
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Due Today</CardTitle>
@@ -105,6 +107,17 @@ export default function HomePage() {
               value={(progress?.newWordsToday || 0) / settings.dailyNewWords * 100}
               className="mt-2"
             />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Backlog Ready</CardTitle>
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{readyItems.length}</div>
+            <p className="text-xs text-muted-foreground">Words ready to add</p>
           </CardContent>
         </Card>
 
@@ -188,6 +201,26 @@ export default function HomePage() {
             </div>
             <Link href="/review">
               <Button size="lg">Start Review</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Backlog CTA */}
+      {readyItems.length > 0 && canAddNewWord() && (
+        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <CardContent className="flex items-center justify-between p-6">
+            <div>
+              <h3 className="text-lg font-semibold">Words Ready in Backlog</h3>
+              <p className="text-sm text-muted-foreground">
+                {readyItems.length} words are scheduled for today
+              </p>
+            </div>
+            <Link href="/backlog">
+              <Button size="lg" className="gap-2">
+                <Calendar className="h-4 w-4" />
+                View Backlog
+              </Button>
             </Link>
           </CardContent>
         </Card>

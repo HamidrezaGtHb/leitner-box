@@ -1,15 +1,18 @@
-import { LeitnerCard, UserSettings, DailyStats } from '@/types';
+import { LeitnerCard, UserSettings, DailyStats, BacklogItem } from '@/types';
 
 const STORAGE_KEYS = {
   CARDS: 'leitner_cards',
   SETTINGS: 'leitner_settings',
   STATS: 'leitner_daily_stats',
+  BACKLOG: 'leitner_backlog',
 } as const;
 
 // Default settings
 const DEFAULT_SETTINGS: UserSettings = {
   dailyNewWords: 10,
   theme: 'system',
+  autoAddFromBacklog: true,
+  maxBacklogSize: 500,
 };
 
 /**
@@ -125,4 +128,44 @@ export function updateTodayStats(
   }
   
   saveDailyStats(stats);
+}
+
+/**
+ * Load backlog from localStorage
+ */
+export function loadBacklog(): BacklogItem[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(STORAGE_KEYS.BACKLOG);
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.error('Error loading backlog:', error);
+    return [];
+  }
+}
+
+/**
+ * Save backlog to localStorage
+ */
+export function saveBacklog(backlog: BacklogItem[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.BACKLOG, JSON.stringify(backlog));
+  } catch (error) {
+    console.error('Error saving backlog:', error);
+  }
+}
+
+/**
+ * Get backlog items ready for today
+ */
+export function getReadyBacklogItems(backlog: BacklogItem[]): BacklogItem[] {
+  const now = Date.now();
+  return backlog.filter((item) => item.scheduledFor <= now).sort((a, b) => {
+    // Sort by priority first, then by scheduled date
+    const priorityOrder = { high: 0, medium: 1, low: 2 };
+    const priorityDiff = priorityOrder[a.priority] - priorityOrder[b.priority];
+    if (priorityDiff !== 0) return priorityDiff;
+    return a.scheduledFor - b.scheduledFor;
+  });
 }
