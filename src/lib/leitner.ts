@@ -3,12 +3,30 @@ import { generateId, getTodayString } from './utils';
 
 // Leitner system intervals in days
 export const BOX_INTERVALS = {
-  1: 1,    // Review daily
+  1: 1,    // Review daily (tomorrow)
   2: 2,    // Review every 2 days
   3: 4,    // Review every 4 days
   4: 7,    // Review weekly
   5: 14,   // Review bi-weekly
 } as const;
+
+/**
+ * Get start of today (midnight)
+ */
+function getStartOfToday(): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today.getTime();
+}
+
+/**
+ * Get start of a specific day (midnight)
+ */
+function getStartOfDay(date: Date): number {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.getTime();
+}
 
 /**
  * Create a new Leitner card from word data
@@ -20,7 +38,7 @@ export function createCard(wordData: WordData): LeitnerCard {
     wordData,
     box: 1,
     lastReviewed: null,
-    nextReview: now, // Due immediately
+    nextReview: getStartOfToday(), // Due today (immediately)
     correctCount: 0,
     incorrectCount: 0,
     createdAt: now,
@@ -29,10 +47,14 @@ export function createCard(wordData: WordData): LeitnerCard {
 
 /**
  * Calculate next review date based on box number
+ * Returns the start of the day (midnight) when the card should be reviewed
  */
 export function calculateNextReview(box: 1 | 2 | 3 | 4 | 5): number {
   const days = BOX_INTERVALS[box];
-  return Date.now() + days * 24 * 60 * 60 * 1000;
+  const nextDate = new Date();
+  nextDate.setDate(nextDate.getDate() + days);
+  nextDate.setHours(0, 0, 0, 0);
+  return nextDate.getTime();
 }
 
 /**
@@ -63,10 +85,12 @@ export function moveCardDown(card: LeitnerCard): LeitnerCard {
 }
 
 /**
- * Check if card is due for review
+ * Check if card is due for review (today or earlier)
  */
 export function isCardDue(card: LeitnerCard): boolean {
-  return card.nextReview <= Date.now();
+  const todayStart = getStartOfToday();
+  const cardDueDate = getStartOfDay(new Date(card.nextReview));
+  return cardDueDate <= todayStart;
 }
 
 /**
@@ -107,4 +131,24 @@ export function hasReachedDailyLimit(
     return cardDate === todayString;
   });
   return newCardsToday.length >= dailyLimit;
+}
+
+/**
+ * Get upcoming reviews (not due yet)
+ */
+export function getUpcomingReviews(cards: LeitnerCard[]): { date: string; count: number }[] {
+  const todayStart = getStartOfToday();
+  const upcoming: Record<string, number> = {};
+
+  cards.forEach((card) => {
+    const cardDueDate = getStartOfDay(new Date(card.nextReview));
+    if (cardDueDate > todayStart) {
+      const dateStr = new Date(cardDueDate).toISOString().split('T')[0];
+      upcoming[dateStr] = (upcoming[dateStr] || 0) + 1;
+    }
+  });
+
+  return Object.entries(upcoming)
+    .map(([date, count]) => ({ date, count }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
