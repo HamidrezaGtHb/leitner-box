@@ -1,63 +1,32 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLeitner } from '@/hooks/use-leitner';
 import { useSettings } from '@/hooks/use-settings';
 import { useBacklog } from '@/hooks/use-backlog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { WordCard } from '@/components/word-card';
-import { enrichWord } from '@/lib/ai-agent';
-import { PlusCircle, Loader2, BookOpen, Target, TrendingUp, Calendar } from 'lucide-react';
+import { CommandPalette } from '@/components/command-palette';
+import { QuickActionsBar } from '@/components/quick-actions-bar';
+import { AIWidget } from '@/components/ai-widget';
+import { Loader2, BookOpen, Target, TrendingUp, Calendar, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 export default function HomePage() {
-  const { cards, addWord, canAddNewWord, getProgress, dueCards, isLoaded } = useLeitner();
+  const { cards, getProgress, dueCards, isLoaded } = useLeitner();
   const { settings } = useSettings();
-  const { readyItems, addToBacklog } = useBacklog();
-  const [word, setWord] = useState('');
-  const [isEnriching, setIsEnriching] = useState(false);
-  const [error, setError] = useState('');
-  const [provider, setProvider] = useState<'openai' | 'gemini'>('gemini');
+  const { readyItems } = useBacklog();
+  const [isCommandOpen, setIsCommandOpen] = useState(false);
 
-  // Load provider preference from localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const storedProvider = (localStorage.getItem('ai_provider') || 'gemini') as 'openai' | 'gemini';
-      setProvider(storedProvider);
-    }
-  }, []);
+  // Setup keyboard shortcuts
+  useKeyboardShortcuts({
+    onCommandPalette: () => setIsCommandOpen(true),
+  });
 
   const progress = isLoaded ? getProgress() : null;
-  const newWordsLeft = settings.dailyNewWords - (progress?.newWordsToday || 0);
-
-  const handleAddWord = async () => {
-    if (!word.trim()) {
-      setError('Please enter a German word');
-      return;
-    }
-
-    if (!canAddNewWord()) {
-      setError(`Daily limit reached (${settings.dailyNewWords} words)`);
-      return;
-    }
-
-    setIsEnriching(true);
-    setError('');
-
-    try {
-      const wordData = await enrichWord(word.trim(), provider);
-      addWord(wordData);
-      setWord('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to add word');
-    } finally {
-      setIsEnriching(false);
-    }
-  };
-
   const recentCards = cards.slice(-5).reverse();
 
   if (!isLoaded) {
@@ -78,8 +47,10 @@ export default function HomePage() {
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           AI-powered spaced repetition system for learning German vocabulary
         </p>
+        <p className="text-sm text-muted-foreground">
+          Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Cmd+K</kbd> to open command palette
+        </p>
       </div>
-
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -133,63 +104,10 @@ export default function HomePage() {
         </Card>
       </div>
 
-      {/* Add Word Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Add New Word</CardTitle>
-          <CardDescription>
-            Enter a German word or verb to get AI-powered translations and examples
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter German word (e.g., Haus, lernen, schön)"
-              value={word}
-              onChange={(e) => setWord(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleAddWord()}
-              disabled={isEnriching || !canAddNewWord()}
-              className="text-lg"
-            />
-            <Button
-              onClick={handleAddWord}
-              disabled={isEnriching || !canAddNewWord()}
-              size="lg"
-            >
-              {isEnriching ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <PlusCircle className="h-5 w-5" />
-              )}
-            </Button>
-          </div>
+      {/* Quick Actions Bar */}
+      <QuickActionsBar onCommandPaletteOpen={() => setIsCommandOpen(true)} />
 
-          {error && (
-            <p className="text-sm text-destructive">{error}</p>
-          )}
-
-          {!canAddNewWord() && (
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <p className="text-sm text-yellow-800 dark:text-yellow-200">
-                You've reached your daily limit of {settings.dailyNewWords} new words.
-                Come back tomorrow or adjust your limit in{' '}
-                <Link href="/settings" className="underline font-medium">
-                  Settings
-                </Link>
-                .
-              </p>
-            </div>
-          )}
-
-          {newWordsLeft > 0 && (
-            <p className="text-sm text-muted-foreground">
-              {newWordsLeft} new {newWordsLeft === 1 ? 'word' : 'words'} remaining today
-            </p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Call to Action */}
+      {/* Call to Action - Review */}
       {dueCards.length > 0 && (
         <Card className="bg-primary/5 border-primary">
           <CardContent className="flex items-center justify-between p-6">
@@ -207,7 +125,7 @@ export default function HomePage() {
       )}
 
       {/* Backlog CTA */}
-      {readyItems.length > 0 && canAddNewWord() && (
+      {readyItems.length > 0 && (
         <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
           <CardContent className="flex items-center justify-between p-6">
             <div>
@@ -238,16 +156,32 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Empty State */}
       {cards.length === 0 && (
-        <div className="text-center py-12 space-y-4">
-          <BookOpen className="h-16 w-16 mx-auto text-muted-foreground" />
-          <h2 className="text-2xl font-bold">No words yet</h2>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            Start building your German vocabulary by adding your first word above.
-            Don't forget to set your API key in Settings first!
-          </p>
-        </div>
+        <Card>
+          <CardContent className="py-12 text-center space-y-4">
+            <Sparkles className="h-16 w-16 mx-auto text-muted-foreground" />
+            <h2 className="text-2xl font-bold">Ready to Start Learning?</h2>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Use the quick actions above or press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Cmd+K</kbd> to add your first words
+            </p>
+            <div className="flex gap-3 justify-center pt-4">
+              <Button onClick={() => setIsCommandOpen(true)}>
+                Open Command Palette
+              </Button>
+              <Link href="/generate">
+                <Button variant="outline">Generate Words</Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Command Palette */}
+      <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
+
+      {/* AI Widget */}
+      <AIWidget />
     </div>
   );
 }
