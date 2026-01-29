@@ -5,7 +5,6 @@ import { LeitnerCard, WordData, Progress } from '@/types';
 import {
   loadCards as loadCardsLocal,
   saveCards as saveCardsLocal,
-  loadSettings,
   updateTodayStats as updateTodayStatsLocal,
 } from '@/lib/storage';
 import {
@@ -16,13 +15,8 @@ import {
 } from '@/lib/db';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import {
-  createCard,
-  moveCardUp,
-  moveCardDown,
-  getDueCards,
-  getNewCards,
+  computeDueCards,
   getCardsByBox,
-  hasReachedDailyLimit,
 } from '@/lib/leitner';
 import { getTodayString } from '@/lib/utils';
 
@@ -72,20 +66,20 @@ export function useLeitner() {
   }, [cards, isLoaded]);
 
   const updateTodayStats = useCallback(
-    async (newWords: number, reviewed: number, correct: number, incorrect: number) => {
-      updateTodayStatsLocal(newWords, reviewed, correct, incorrect);
+    async (newWords: number, reviewed: number, correct: number, incorrect: number, hard: number = 0) => {
+      updateTodayStatsLocal(newWords, reviewed, correct, incorrect, hard);
       if (useSupabase) {
-        await dbUpdateTodayStats(newWords, reviewed, correct, incorrect);
+        await dbUpdateTodayStats(newWords, reviewed, correct, incorrect, hard);
       }
     },
     [useSupabase]
   );
 
-  const addWord = useCallback(
-    async (wordData: WordData) => {
-      const card = createCard(wordData);
+  // Add a new card (accepts full card object with normalizedKey)
+  const addCard = useCallback(
+    async (card: LeitnerCard) => {
       setCards((prev) => [...prev, card]);
-      await updateTodayStats(1, 0, 0, 0);
+      await updateTodayStats(1, 0, 0, 0, 0);
       if (useSupabase) {
         await dbSaveCard(card);
       }
@@ -93,27 +87,17 @@ export function useLeitner() {
     [useSupabase, updateTodayStats]
   );
 
-  const reviewCard = useCallback(
-    async (cardId: string, correct: boolean) => {
-      let updatedCard: LeitnerCard | null = null;
-
+  // Update an existing card
+  const updateCard = useCallback(
+    async (updatedCard: LeitnerCard) => {
       setCards((prev) =>
-        prev.map((card) => {
-          if (card.id === cardId) {
-            updatedCard = correct ? moveCardUp(card) : moveCardDown(card);
-            return updatedCard;
-          }
-          return card;
-        })
+        prev.map((card) => (card.id === updatedCard.id ? updatedCard : card))
       );
-
-      await updateTodayStats(0, 1, correct ? 1 : 0, correct ? 0 : 1);
-
-      if (useSupabase && updatedCard) {
+      if (useSupabase) {
         await dbSaveCard(updatedCard);
       }
     },
-    [useSupabase, updateTodayStats]
+    [useSupabase]
   );
 
   const deleteCard = useCallback(
@@ -126,19 +110,10 @@ export function useLeitner() {
     [useSupabase]
   );
 
+  // Get progress statistics
   const getProgress = useCallback((): Progress => {
-    const settings = loadSettings();
+    const dueCards = computeDueCards(cards);
     const todayString = getTodayString();
-    const due = getDueCards(cards);
-
-    const cardsInBox = {
-      1: getCardsByBox(cards, 1).length,
-      2: getCardsByBox(cards, 2).length,
-      3: getCardsByBox(cards, 3).length,
-      4: getCardsByBox(cards, 4).length,
-      5: getCardsByBox(cards, 5).length,
-    };
-
     const newWordsToday = cards.filter((card) => {
       const cardDate = new Date(card.createdAt).toISOString().split('T')[0];
       return cardDate === todayString;
@@ -146,31 +121,32 @@ export function useLeitner() {
 
     return {
       totalCards: cards.length,
-      cardsInBox,
-      cardsDueToday: due.length,
+      cardsInBox: {
+        1: getCardsByBox(cards, 1).length,
+        2: getCardsByBox(cards, 2).length,
+        3: getCardsByBox(cards, 3).length,
+        4: getCardsByBox(cards, 4).length,
+        5: getCardsByBox(cards, 5).length,
+      },
+      cardsDueToday: dueCards.length,
       newWordsToday,
       studiedToday: 0,
       correctToday: 0,
       incorrectToday: 0,
-      lastStudyDate: todayString,
+      lastStudyDate: '',
     };
   }, [cards]);
 
-  const canAddNewWord = useCallback((): boolean => {
-    const settings = loadSettings();
-    return !hasReachedDailyLimit(cards, settings.dailyNewWords);
-  }, [cards]);
+  // Compute due cards using strict Leitner rules
+  const dueCards = computeDueCards(cards);
 
   return {
     cards,
+    dueCards,
     isLoaded,
-    useSupabase,
-    addWord,
-    reviewCard,
+    addCard,
+    updateCard,
     deleteCard,
     getProgress,
-    canAddNewWord,
-    dueCards: getDueCards(cards),
-    newCards: getNewCards(cards),
   };
 }

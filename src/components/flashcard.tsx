@@ -11,14 +11,18 @@ interface FlashcardProps {
   wordData: WordData;
   onCorrect: () => void;
   onIncorrect: () => void;
+  onHard?: () => void;
   showActions?: boolean;
+  showHardButton?: boolean;
 }
 
 export function Flashcard({
   wordData,
   onCorrect,
   onIncorrect,
+  onHard,
   showActions = true,
+  showHardButton = false,
 }: FlashcardProps) {
   const [isFlipped, setIsFlipped] = useState(false);
 
@@ -144,22 +148,32 @@ export function Flashcard({
       </div>
 
       {showActions && isFlipped && (
-        <div className="flex gap-4 mt-6 justify-center">
+        <div className="flex gap-3 mt-6 justify-center">
           <Button
             variant="destructive"
             size="lg"
             onClick={onIncorrect}
             className="flex-1 max-w-xs"
           >
-            I didn't know
+            Wrong
           </Button>
+          {showHardButton && onHard && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onHard}
+              className="flex-1 max-w-xs border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-950"
+            >
+              Hard
+            </Button>
+          )}
           <Button
             variant="default"
             size="lg"
             onClick={onCorrect}
             className="flex-1 max-w-xs"
           >
-            I knew it!
+            Correct
           </Button>
         </div>
       )}
