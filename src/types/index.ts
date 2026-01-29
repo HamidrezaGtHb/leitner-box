@@ -28,12 +28,16 @@ export interface WordData {
 // Leitner System types
 export interface LeitnerCard {
   id: string;
+  userId?: string;
+  normalizedKey: string;
   wordData: WordData;
-  box: 1 | 2 | 3 | 4 | 5;
-  lastReviewed: number | null;
-  nextReview: number;
+  boxIndex: 1 | 2 | 3 | 4 | 5;
+  lastReviewedAt: number | null;
+  nextReviewAt: number;
+  lastAnswer?: 'correct' | 'wrong' | 'hard';
   correctCount: number;
   incorrectCount: number;
+  hardCount: number;
   createdAt: number;
 }
 
@@ -46,6 +50,8 @@ export interface LeitnerBox {
 export interface UserSettings {
   dailyNewWords: 5 | 10 | 15;
   theme: 'light' | 'dark' | 'system';
+  isLockedMode: boolean;
+  reviewIntervals: number[]; // days per box [1, 2, 4, 7, 14]
   autoAddFromBacklog: boolean;
   maxBacklogSize: number;
 }
@@ -67,6 +73,7 @@ export interface DailyStats {
   reviewed: number;
   correct: number;
   incorrect: number;
+  hard: number;
 }
 
 // AI API Response
@@ -86,9 +93,30 @@ export type Priority = 'high' | 'medium' | 'low';
 
 export interface BacklogItem {
   id: string;
+  userId?: string;
+  normalizedKey: string;
   wordData: WordData;
   scheduledFor: number; // timestamp
   priority: Priority;
   source: BacklogSource;
   createdAt: number;
+}
+
+// Strict Leitner types
+export interface StrictLeitnerConfig {
+  intervals: number[]; // days per box
+  maxBox: number;
+}
+
+export interface LockedModeState {
+  isEnabled: boolean;
+  dueCount: number;
+  nextDueIn: number | null; // milliseconds until next card
+}
+
+// Auth types
+export interface User {
+  id: string;
+  email?: string;
+  createdAt: string;
 }

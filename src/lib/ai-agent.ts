@@ -1,5 +1,7 @@
 import { AIWordResponse, WordData, WordType } from '@/types';
 import { generateId } from './utils';
+import { extractTextFromImage, extractGermanWordsFromImage } from './ocr';
+import { checkMultipleDuplicates } from './duplicate-detector';
 
 /**
  * Call server-side API to enrich word data
@@ -128,4 +130,186 @@ export async function batchEnrichWords(
   }
 
   return enrichedWords;
+}
+
+/**
+ * Parse user intent from message
+ */
+function parseIntent(message: string): 'generate' | 'add' | 'extract' | 'help' {
+  const lower = message.toLowerCase();
+  
+  if (lower.includes('generate') || lower.includes('give me') || lower.includes('create') || /\d+\s*(words|wörter)/i.test(lower)) {
+    return 'generate';
+  }
+  
+  if (lower.includes('add') || lower.includes('create card')) {
+    return 'add';
+  }
+  
+  if (lower.includes('extract') || lower.includes('from') || lower.includes('picture') || lower.includes('image')) {
+    return 'extract';
+  }
+  
+  return 'help';
+}
+
+/**
+ * Extract parameters from generate request
+ */
+function parseGenerateParams(message: string): { count: number; level: string; topic?: string } {
+  const countMatch = message.match(/(\d+)/);
+  const count = countMatch ? parseInt(countMatch[1]) : 10;
+  
+  const levelMatch = message.match(/\b(A1|A2|B1|B2|C1|C2)\b/i);
+  const level = levelMatch ? levelMatch[1].toUpperCase() : 'B1';
+  
+  const topicMatch = message.match(/about\s+(.+)$/i) || message.match(/zum\s+Thema\s+(.+)$/i);
+  const topic = topicMatch ? topicMatch[1].trim() : undefined;
+  
+  return { count, level, topic };
+}
+
+/**
+ * Process chat command with AI
+ */
+export async function processChatCommand(
+  userMessage: string,
+  imageFile?: File,
+  userId?: string
+): Promise<{
+  response: string;
+  cards: WordData[];
+  duplicates: string[];
+}> {
+  try {
+    const { extractTextFromImage, extractGermanWordsFromImage } = await import('./ocr');
+    const { checkMultipleDuplicates } = await import('./duplicate-detector');
+    
+    const intent = parseIntent(userMessage);
+    
+    // Handle image extraction
+    if (imageFile || intent === 'extract') {
+      if (!imageFile) {
+        return {
+          response: 'Please upload an image to extract words from.',
+          cards: [],
+          duplicates: [],
+        };
+      }
+      
+      const words = await extractGermanWordsFromImage(imageFile);
+      
+      if (words.length === 0) {
+        return {
+          response: 'No German words found in the image. Please try a clearer image.',
+          cards: [],
+          duplicates: [],
+        };
+      }
+      
+      // Check for duplicates
+      const { unique, duplicates } = await checkMultipleDuplicates(words, userId);
+      
+      // Enrich unique words
+      const enrichedCards: WordData[] = [];
+      for (const word of unique.slice(0, 20)) { // Limit to 20 words
+        try {
+          const wordData = await enrichWord(word);
+          enrichedCards.push(wordData);
+          await delay(500); // Rate limit
+        } catch (err) {
+          console.error(`Failed to enrich word: ${word}`, err);
+        }
+      }
+      
+      return {
+        response: `I found ${words.length} German words in the image. Created ${enrichedCards.length} cards${duplicates.length > 0 ? ` (${duplicates.length} duplicates skipped)` : ''}.`,
+        cards: enrichedCards,
+        duplicates,
+      };
+    }
+    
+    // Handle word generation
+    if (intent === 'generate') {
+      const { count, level, topic } = parseGenerateParams(userMessage);
+      
+      const words = await generateWordList(level as any, count);
+      
+      // Check for duplicates
+      const { unique, duplicates } = await checkMultipleDuplicates(words, userId);
+      
+      // Enrich unique words
+      const enrichedCards: WordData[] = [];
+      for (const word of unique) {
+        try {
+          const wordData = await enrichWord(word);
+          enrichedCards.push(wordData);
+          await delay(500); // Rate limit
+        } catch (err) {
+          console.error(`Failed to enrich word: ${word}`, err);
+        }
+      }
+      
+      return {
+        response: `I generated ${count} ${level} words${topic ? ` about ${topic}` : ''}. Created ${enrichedCards.length} cards${duplicates.length > 0 ? ` (${duplicates.length} duplicates skipped)` : ''}.`,
+        cards: enrichedCards,
+        duplicates,
+      };
+    }
+    
+    // Handle single word addition
+    if (intent === 'add') {
+      const wordMatch = userMessage.match(/["'](.+?)["']|add\s+(.+)/i);
+      const word = wordMatch ? (wordMatch[1] || wordMatch[2]).trim() : '';
+      
+      if (!word) {
+        return {
+          response: 'Please specify a word to add. For example: "Add der Bahnhof"',
+          cards: [],
+          duplicates: [],
+        };
+      }
+      
+      // Check duplicate
+      const dupResult = await checkMultipleDuplicates([word], userId);
+      
+      if (dupResult.duplicates.length > 0) {
+        return {
+          response: `The word "${word}" already exists in your collection.`,
+          cards: [],
+          duplicates: [word],
+        };
+      }
+      
+      const wordData = await enrichWord(word);
+      
+      return {
+        response: `Created a card for "${word}".`,
+        cards: [wordData],
+        duplicates: [],
+      };
+    }
+    
+    // Help/fallback
+    return {
+      response: `I can help you with:
+• Generating word lists: "Generate 10 B2 words about travel"
+• Adding single words: "Add der Bahnhof"
+• Extracting words from images: Upload an image with German text
+
+What would you like to do?`,
+      cards: [],
+      duplicates: [],
+    };
+  } catch (error: any) {
+    console.error('Chat command error:', error);
+    throw new Error(error.message || 'Failed to process command');
+  }
+}
+
+/**
+ * Rate limiter for batch operations
+ */
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }

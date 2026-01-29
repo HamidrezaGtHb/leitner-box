@@ -4,6 +4,42 @@
  */
 
 import levenshtein from 'fast-levenshtein';
+import { dbFindCardByNormalizedKey, dbFindBacklogByNormalizedKey } from './db';
+import { loadCards, loadBacklog } from './storage';
+import { isSupabaseConfigured } from './supabase';
+
+/**
+ * Generate normalized key for deduplication
+ * Removes articles, normalizes spaces, lowercase, keeps German characters
+ */
+export function generateNormalizedKey(word: string): string {
+  let normalized = word
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, ' '); // Normalize spaces
+
+  // Remove German articles at the beginning
+  normalized = normalized.replace(/^(der|die|das|ein|eine)\s+/i, '');
+
+  // Remove special characters except German umlauts and ß
+  normalized = normalized.replace(/[^\w\säöüß]/gi, '');
+
+  return normalized;
+}
+
+/**
+ * Normalize German word for comparison (legacy)
+ * Handles common variations and typos
+ */
+export function normalizeGermanWord(word: string): string {
+  return word
+    .toLowerCase()
+    .trim()
+    .replace(/ß/g, 'ss')  // ß → ss
+    .replace(/ä/g, 'ae')  // ä → ae
+    .replace(/ö/g, 'oe')  // ö → oe
+    .replace(/ü/g, 'ue'); // ü → ue
+}
 
 /**
  * Calculate similarity percentage between two words
@@ -36,20 +72,6 @@ export function isDuplicateWord(word1: string, word2: string, threshold: number 
 }
 
 /**
- * Normalize German word for comparison
- * Handles common variations and typos
- */
-export function normalizeGermanWord(word: string): string {
-  return word
-    .toLowerCase()
-    .trim()
-    .replace(/ß/g, 'ss')  // ß → ss
-    .replace(/ä/g, 'ae')  // ä → ae
-    .replace(/ö/g, 'oe')  // ö → oe
-    .replace(/ü/g, 'ue'); // ü → ue
-}
-
-/**
  * Find best matches for a word
  * Returns top N matches sorted by similarity
  */
@@ -74,4 +96,73 @@ export function findBestMatches(
     .slice(0, topN);
   
   return matches;
+}
+
+/**
+ * Check for duplicate across the entire system (cards + backlog)
+ */
+export async function checkDuplicateAcrossSystem(
+  word: string,
+  userId?: string
+): Promise<{ exists: boolean; location: 'cards' | 'backlog' | null; word?: string }> {
+  const normalized = generateNormalizedKey(word);
+
+  if (isSupabaseConfigured() && userId) {
+    // Check Supabase
+    const existingCard = await dbFindCardByNormalizedKey(normalized, userId);
+    if (existingCard) {
+      return { exists: true, location: 'cards', word: existingCard.wordData.word };
+    }
+
+    const existingBacklog = await dbFindBacklogByNormalizedKey(normalized, userId);
+    if (existingBacklog) {
+      return { exists: true, location: 'backlog', word: existingBacklog.wordData.word };
+    }
+  } else {
+    // Check LocalStorage
+    const cards = loadCards();
+    const existingCard = cards.find((c) => c.normalizedKey === normalized);
+    if (existingCard) {
+      return { exists: true, location: 'cards', word: existingCard.wordData.word };
+    }
+
+    const backlog = loadBacklog();
+    const existingBacklog = backlog.find((b) => b.normalizedKey === normalized);
+    if (existingBacklog) {
+      return { exists: true, location: 'backlog', word: existingBacklog.wordData.word };
+    }
+  }
+
+  return { exists: false, location: null };
+}
+
+/**
+ * Check multiple words for duplicates
+ */
+export async function checkMultipleDuplicates(
+  words: string[],
+  userId?: string
+): Promise<{
+  duplicates: string[];
+  unique: string[];
+  details: Record<string, { location: 'cards' | 'backlog'; existingWord: string }>;
+}> {
+  const duplicates: string[] = [];
+  const unique: string[] = [];
+  const details: Record<string, { location: 'cards' | 'backlog'; existingWord: string }> = {};
+
+  for (const word of words) {
+    const result = await checkDuplicateAcrossSystem(word, userId);
+    if (result.exists && result.location && result.word) {
+      duplicates.push(word);
+      details[word] = {
+        location: result.location,
+        existingWord: result.word,
+      };
+    } else {
+      unique.push(word);
+    }
+  }
+
+  return { duplicates, unique, details };
 }

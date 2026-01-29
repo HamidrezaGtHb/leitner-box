@@ -1,154 +1,193 @@
-import { LeitnerCard, WordData } from '@/types';
-import { generateId, getTodayString } from './utils';
+import { LeitnerCard, WordData, StrictLeitnerConfig } from '@/types';
+import { generateId } from './utils';
 
-// Leitner system intervals in days
-export const BOX_INTERVALS = {
-  1: 1,    // Review daily (tomorrow)
-  2: 2,    // Review every 2 days
-  3: 4,    // Review every 4 days
-  4: 7,    // Review weekly
-  5: 14,   // Review bi-weekly
-} as const;
+// Default Leitner configuration
+export const DEFAULT_LEITNER_CONFIG: StrictLeitnerConfig = {
+  intervals: [1, 2, 4, 7, 14], // days per box
+  maxBox: 5,
+};
+
+// ============================================
+// Core Strict Leitner Functions
+// ============================================
 
 /**
- * Get start of today (midnight)
+ * Compute which cards are due for review
  */
-function getStartOfToday(): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return today.getTime();
+export function computeDueCards(
+  cards: LeitnerCard[],
+  now: Date = new Date()
+): LeitnerCard[] {
+  return cards.filter((card) => card.nextReviewAt <= now.getTime());
 }
 
 /**
- * Get start of a specific day (midnight)
+ * Compute milliseconds until the next card becomes due
+ * Returns null if no future cards exist
  */
-function getStartOfDay(date: Date): number {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
+export function computeNextDueIn(
+  cards: LeitnerCard[],
+  now: Date = new Date()
+): number | null {
+  const futureCards = cards
+    .filter((card) => card.nextReviewAt > now.getTime())
+    .sort((a, b) => a.nextReviewAt - b.nextReviewAt);
+
+  if (futureCards.length === 0) return null;
+
+  return futureCards[0].nextReviewAt - now.getTime();
+}
+
+/**
+ * Apply user's answer and update card according to strict Leitner rules
+ */
+export function applyAnswer(
+  card: LeitnerCard,
+  answer: 'correct' | 'wrong' | 'hard',
+  config: StrictLeitnerConfig = DEFAULT_LEITNER_CONFIG
+): LeitnerCard {
+  const now = Date.now();
+  let newBoxIndex = card.boxIndex;
+
+  // Apply Leitner rules
+  if (answer === 'correct') {
+    newBoxIndex = Math.min(card.boxIndex + 1, config.maxBox) as 1 | 2 | 3 | 4 | 5;
+  } else if (answer === 'wrong') {
+    newBoxIndex = 1; // Reset to Box 1
+  } else if (answer === 'hard') {
+    newBoxIndex = Math.max(1, card.boxIndex - 1) as 1 | 2 | 3 | 4 | 5; // Move back one box
+  }
+
+  // Calculate next review time
+  const intervalDays = config.intervals[newBoxIndex - 1];
+  const nextReviewAt = now + intervalDays * 24 * 60 * 60 * 1000;
+
+  return {
+    ...card,
+    boxIndex: newBoxIndex,
+    lastReviewedAt: now,
+    nextReviewAt,
+    lastAnswer: answer,
+    correctCount: answer === 'correct' ? card.correctCount + 1 : card.correctCount,
+    incorrectCount: answer === 'wrong' ? card.incorrectCount + 1 : card.incorrectCount,
+    hardCount: answer === 'hard' ? card.hardCount + 1 : card.hardCount,
+  };
+}
+
+/**
+ * Get cards in a specific box
+ */
+export function getCardsByBox(
+  cards: LeitnerCard[],
+  boxIndex: 1 | 2 | 3 | 4 | 5
+): LeitnerCard[] {
+  return cards.filter((card) => card.boxIndex === boxIndex);
+}
+
+/**
+ * Get new cards (Box 1, never reviewed)
+ */
+export function getNewCards(cards: LeitnerCard[]): LeitnerCard[] {
+  return cards.filter((card) => card.boxIndex === 1 && card.lastReviewedAt === null);
 }
 
 /**
  * Create a new Leitner card from word data
  */
-export function createCard(wordData: WordData): LeitnerCard {
+export function createCard(
+  wordData: WordData,
+  normalizedKey: string,
+  config: StrictLeitnerConfig = DEFAULT_LEITNER_CONFIG
+): LeitnerCard {
   const now = Date.now();
+  const firstIntervalDays = config.intervals[0];
+  const nextReviewAt = now + firstIntervalDays * 24 * 60 * 60 * 1000;
+
   return {
     id: generateId(),
+    normalizedKey,
     wordData,
-    box: 1,
-    lastReviewed: null,
-    nextReview: getStartOfToday(), // Due today (immediately)
+    boxIndex: 1,
+    lastReviewedAt: null,
+    nextReviewAt,
     correctCount: 0,
     incorrectCount: 0,
+    hardCount: 0,
     createdAt: now,
   };
 }
 
 /**
- * Calculate next review date based on box number
- * Returns the start of the day (midnight) when the card should be reviewed
- */
-export function calculateNextReview(box: 1 | 2 | 3 | 4 | 5): number {
-  const days = BOX_INTERVALS[box];
-  const nextDate = new Date();
-  nextDate.setDate(nextDate.getDate() + days);
-  nextDate.setHours(0, 0, 0, 0);
-  return nextDate.getTime();
-}
-
-/**
- * Move card to next box (correct answer)
- */
-export function moveCardUp(card: LeitnerCard): LeitnerCard {
-  const newBox = Math.min(5, card.box + 1) as 1 | 2 | 3 | 4 | 5;
-  return {
-    ...card,
-    box: newBox,
-    lastReviewed: Date.now(),
-    nextReview: calculateNextReview(newBox),
-    correctCount: card.correctCount + 1,
-  };
-}
-
-/**
- * Move card back to box 1 (incorrect answer)
- */
-export function moveCardDown(card: LeitnerCard): LeitnerCard {
-  return {
-    ...card,
-    box: 1,
-    lastReviewed: Date.now(),
-    nextReview: calculateNextReview(1),
-    incorrectCount: card.incorrectCount + 1,
-  };
-}
-
-/**
- * Check if card is due for review (today or earlier)
- */
-export function isCardDue(card: LeitnerCard): boolean {
-  const todayStart = getStartOfToday();
-  const cardDueDate = getStartOfDay(new Date(card.nextReview));
-  return cardDueDate <= todayStart;
-}
-
-/**
- * Get cards due today
- */
-export function getDueCards(cards: LeitnerCard[]): LeitnerCard[] {
-  return cards.filter(isCardDue).sort((a, b) => a.nextReview - b.nextReview);
-}
-
-/**
- * Get new cards (never reviewed)
- */
-export function getNewCards(cards: LeitnerCard[]): LeitnerCard[] {
-  return cards.filter((card) => card.lastReviewed === null);
-}
-
-/**
- * Get cards by box number
- */
-export function getCardsByBox(
-  cards: LeitnerCard[],
-  box: 1 | 2 | 3 | 4 | 5
-): LeitnerCard[] {
-  return cards.filter((card) => card.box === box);
-}
-
-/**
- * Check if user has reached daily limit
+ * Check if user has reached daily new words limit
  */
 export function hasReachedDailyLimit(
-  cards: LeitnerCard[],
-  dailyLimit: number
+  todayNewWords: number,
+  limit: number
 ): boolean {
-  const todayString = getTodayString();
-  const newCardsToday = cards.filter((card) => {
-    if (!card.createdAt) return false;
-    const cardDate = new Date(card.createdAt).toISOString().split('T')[0];
-    return cardDate === todayString;
-  });
-  return newCardsToday.length >= dailyLimit;
+  return todayNewWords >= limit;
 }
 
 /**
- * Get upcoming reviews (not due yet)
+ * Get cards distribution across boxes
  */
-export function getUpcomingReviews(cards: LeitnerCard[]): { date: string; count: number }[] {
-  const todayStart = getStartOfToday();
-  const upcoming: Record<string, number> = {};
+export function getBoxDistribution(cards: LeitnerCard[]): Record<1 | 2 | 3 | 4 | 5, number> {
+  return {
+    1: getCardsByBox(cards, 1).length,
+    2: getCardsByBox(cards, 2).length,
+    3: getCardsByBox(cards, 3).length,
+    4: getCardsByBox(cards, 4).length,
+    5: getCardsByBox(cards, 5).length,
+  };
+}
 
-  cards.forEach((card) => {
-    const cardDueDate = getStartOfDay(new Date(card.nextReview));
-    if (cardDueDate > todayStart) {
-      const dateStr = new Date(cardDueDate).toISOString().split('T')[0];
-      upcoming[dateStr] = (upcoming[dateStr] || 0) + 1;
-    }
+/**
+ * Format next due time as human-readable string
+ */
+export function formatNextDueIn(milliseconds: number): string {
+  const seconds = Math.floor(milliseconds / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days} day${days > 1 ? 's' : ''}`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
+  return `${seconds} second${seconds > 1 ? 's' : ''}`;
+}
+
+// ============================================
+// Legacy compatibility functions (deprecated)
+// ============================================
+
+/**
+ * @deprecated Use computeDueCards instead
+ */
+export function getDueCards(cards: LeitnerCard[]): LeitnerCard[] {
+  return computeDueCards(cards);
+}
+
+/**
+ * @deprecated Use applyAnswer with 'correct' instead
+ */
+export function moveCardUp(
+  card: LeitnerCard,
+  intervalDays: number[]
+): LeitnerCard {
+  return applyAnswer(card, 'correct', {
+    intervals: intervalDays,
+    maxBox: 5,
   });
+}
 
-  return Object.entries(upcoming)
-    .map(([date, count]) => ({ date, count }))
-    .sort((a, b) => a.date.localeCompare(b.date));
+/**
+ * @deprecated Use applyAnswer with 'wrong' instead
+ */
+export function moveCardDown(
+  card: LeitnerCard,
+  intervalDays: number[]
+): LeitnerCard {
+  return applyAnswer(card, 'wrong', {
+    intervals: intervalDays,
+    maxBox: 5,
+  });
 }
