@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useBacklog } from '@/hooks/use-backlog';
 import { useLeitner } from '@/hooks/use-leitner';
+import { useSettings } from '@/hooks/use-settings';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,29 +12,32 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Calendar, ArrowRight, Search, Trash2, Plus } from 'lucide-react';
 import { formatDate } from '@/lib/utils';
 import { BacklogItem, Priority } from '@/types';
+import { createCard } from '@/lib/leitner';
 
 export default function BacklogPage() {
   const { backlog, removeFromBacklog, updateBacklogItem, readyItems, futureItems, isLoaded } = useBacklog();
-  const { addWord, canAddNewWord } = useLeitner();
+  const { addCard } = useLeitner();
+  const { settings } = useSettings();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAddToActive = (item: BacklogItem) => {
-    if (!canAddNewWord()) {
+  const handleAddToActive = async (item: BacklogItem) => {
+    const todayCount = 0; // Would need to get from stats
+    if (todayCount >= settings.dailyNewWords) {
       alert('Daily limit reached! Please adjust your limit in Settings or wait until tomorrow.');
       return;
     }
     
-    addWord(item.wordData);
+    const card = createCard(item.wordData);
+    await addCard(card);
     removeFromBacklog(item.id);
   };
 
-  const handleAddAllReady = () => {
-    readyItems.forEach((item) => {
-      if (canAddNewWord()) {
-        addWord(item.wordData);
-        removeFromBacklog(item.id);
-      }
-    });
+  const handleAddAllReady = async () => {
+    for (const item of readyItems) {
+      const card = createCard(item.wordData);
+      await addCard(card);
+      removeFromBacklog(item.id);
+    }
   };
 
   const handleUpdateSchedule = (id: string, days: number) => {
@@ -78,6 +82,43 @@ export default function BacklogPage() {
         )}
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Ready Today</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              {readyItems.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Words available now</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-600">
+              {futureItems.length}
+            </div>
+            <p className="text-xs text-muted-foreground">Words for later</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm font-medium">Total Backlog</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{backlog.length}</div>
+            <p className="text-xs text-muted-foreground">Total items</p>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Search */}
       <Card>
         <CardContent className="pt-6">
@@ -93,189 +134,158 @@ export default function BacklogPage() {
         </CardContent>
       </Card>
 
+      {/* Backlog Items */}
       {backlog.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
             <Calendar className="h-16 w-16 mx-auto text-muted-foreground" />
             <div>
-              <h2 className="text-2xl font-bold">No words in backlog</h2>
+              <h2 className="text-2xl font-bold">No items in backlog</h2>
               <p className="text-muted-foreground">
-                Add words from the Generate page to build your future learning queue
+                Use the AI assistant to generate words and add them to your backlog
               </p>
             </div>
           </CardContent>
         </Card>
       ) : (
         <Tabs defaultValue="ready" className="w-full">
-          <TabsList>
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="ready">
-              Ready Now ({readyItems.length})
+              Ready ({readyItems.length})
             </TabsTrigger>
-            <TabsTrigger value="future">
+            <TabsTrigger value="scheduled">
               Scheduled ({futureItems.length})
             </TabsTrigger>
             <TabsTrigger value="all">All ({backlog.length})</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="ready" className="space-y-4">
-            {readyItems.length > 0 ? (
+          <TabsContent value="ready" className="space-y-4 mt-6">
+            {readyItems.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No words ready yet. Check back later!
+                </CardContent>
+              </Card>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {readyItems.map((item) => (
-                  <BacklogCard
-                    key={item.id}
-                    item={item}
-                    onAddToActive={handleAddToActive}
-                    onDelete={removeFromBacklog}
-                    onUpdateSchedule={handleUpdateSchedule}
-                    onUpdatePriority={handleUpdatePriority}
-                  />
+                  <Card key={item.id} className="relative">
+                    <CardContent className="pt-6">
+                      <WordCard wordData={item.wordData} />
+                      <div className="flex gap-2 mt-4">
+                        <Button
+                          onClick={() => handleAddToActive(item)}
+                          size="sm"
+                          className="flex-1 gap-2"
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                          Add to Active
+                        </Button>
+                        <Button
+                          onClick={() => removeFromBacklog(item.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No words ready to add today
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="future" className="space-y-4">
-            {futureItems.length > 0 ? (
+          <TabsContent value="scheduled" className="space-y-4 mt-6">
+            {futureItems.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center text-muted-foreground">
+                  No scheduled words
+                </CardContent>
+              </Card>
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {futureItems.map((item) => (
-                  <BacklogCard
-                    key={item.id}
-                    item={item}
-                    onAddToActive={handleAddToActive}
-                    onDelete={removeFromBacklog}
-                    onUpdateSchedule={handleUpdateSchedule}
-                    onUpdatePriority={handleUpdatePriority}
-                  />
+                  <Card key={item.id}>
+                    <CardContent className="pt-6">
+                      <WordCard wordData={item.wordData} />
+                      <div className="mt-4 space-y-2">
+                        <p className="text-xs text-muted-foreground">
+                          Scheduled: {formatDate(item.scheduledFor)}
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleUpdateSchedule(item.id, 0)}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Make Ready
+                          </Button>
+                          <Button
+                            onClick={() => removeFromBacklog(item.id)}
+                            variant="outline"
+                            size="sm"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No scheduled words
               </div>
             )}
           </TabsContent>
 
-          <TabsContent value="all" className="space-y-4">
-            {filteredBacklog.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredBacklog.map((item) => (
-                  <BacklogCard
-                    key={item.id}
-                    item={item}
-                    onAddToActive={handleAddToActive}
-                    onDelete={removeFromBacklog}
-                    onUpdateSchedule={handleUpdateSchedule}
-                    onUpdatePriority={handleUpdatePriority}
-                  />
+          <TabsContent value="all" className="space-y-4 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredBacklog.map((item) => (
+                <Card key={item.id}>
+                  <CardContent className="pt-6">
+                    <WordCard wordData={item.wordData} />
+                    <div className="mt-4 space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        {item.scheduledFor <= Date.now()
+                          ? 'Ready now'
+                          : `Scheduled: ${formatDate(item.scheduledFor)}`}
+                      </p>
+                      <div className="flex gap-2">
+                        {item.scheduledFor <= Date.now() ? (
+                          <Button
+                            onClick={() => handleAddToActive(item)}
+                            size="sm"
+                            className="flex-1 gap-2"
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                            Add to Active
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => handleUpdateSchedule(item.id, 0)}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Make Ready
+                          </Button>
+                        )}
+                        <Button
+                          onClick={() => removeFromBacklog(item.id)}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No words found matching "{searchQuery}"
-              </div>
-            )}
+            </div>
           </TabsContent>
         </Tabs>
       )}
-    </div>
-  );
-}
-
-function BacklogCard({
-  item,
-  onAddToActive,
-  onDelete,
-  onUpdateSchedule,
-  onUpdatePriority,
-}: {
-  item: BacklogItem;
-  onAddToActive: (item: BacklogItem) => void;
-  onDelete: (id: string) => void;
-  onUpdateSchedule: (id: string, days: number) => void;
-  onUpdatePriority: (id: string, priority: Priority) => void;
-}) {
-  const isReady = item.scheduledFor <= Date.now();
-  const priorities: Priority[] = ['high', 'medium', 'low'];
-
-  const getPriorityColor = (p: Priority) => {
-    switch (p) {
-      case 'high':
-        return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
-      case 'medium':
-        return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400';
-      case 'low':
-        return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
-    }
-  };
-
-  return (
-    <div className="relative">
-      <WordCard wordData={item.wordData} />
-      
-      <div className="mt-3 space-y-2">
-        {/* Priority and Schedule Info */}
-        <div className="flex items-center gap-2 text-sm">
-          <div className="flex gap-1">
-            {priorities.map((p) => (
-              <button
-                key={p}
-                onClick={() => onUpdatePriority(item.id, p)}
-                className={`px-2 py-1 rounded text-xs font-medium ${
-                  item.priority === p
-                    ? getPriorityColor(p)
-                    : 'bg-muted text-muted-foreground'
-                }`}
-              >
-                {p}
-              </button>
-            ))}
-          </div>
-          <div className="flex-1 text-right">
-            <span className={`text-xs ${isReady ? 'text-green-600' : 'text-muted-foreground'}`}>
-              {isReady ? 'Ready!' : formatDate(item.scheduledFor)}
-            </span>
-          </div>
-        </div>
-
-        {/* Schedule Controls */}
-        <div className="flex gap-1">
-          {[1, 3, 7].map((days) => (
-            <Button
-              key={days}
-              variant="outline"
-              size="sm"
-              onClick={() => onUpdateSchedule(item.id, days)}
-              className="flex-1 text-xs"
-            >
-              +{days}d
-            </Button>
-          ))}
-        </div>
-
-        {/* Actions */}
-        <div className="flex gap-2">
-          <Button
-            onClick={() => onAddToActive(item)}
-            variant="default"
-            size="sm"
-            className="flex-1 gap-1"
-          >
-            <ArrowRight className="h-3 w-3" />
-            Add Now
-          </Button>
-          <Button
-            onClick={() => onDelete(item.id)}
-            variant="destructive"
-            size="sm"
-          >
-            <Trash2 className="h-3 w-3" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
