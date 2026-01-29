@@ -8,6 +8,8 @@ export function useSettings() {
   const [settings, setSettings] = useState<UserSettings>({
     dailyNewWords: 10,
     theme: 'system',
+    autoAddFromBacklog: true,
+    maxBacklogSize: 500,
   });
   const [isLoaded, setIsLoaded] = useState(false);
 

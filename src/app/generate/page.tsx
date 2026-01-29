@@ -7,7 +7,7 @@ import { WordLevelSelector } from '@/components/word-level-selector';
 import { BatchProgress } from '@/components/batch-progress';
 import { generateWordList, batchEnrichWords } from '@/lib/ai-agent';
 import { useLeitner } from '@/hooks/use-leitner';
-import { useSettings } from '@/hooks/use-settings';
+import { useBacklog } from '@/hooks/use-backlog';
 import { Sparkles, Plus, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -18,7 +18,7 @@ const COUNT_OPTIONS = [10, 25, 50, 100];
 
 export default function GeneratePage() {
   const { addWord } = useLeitner();
-  const { settings } = useSettings();
+  const { addManyToBacklog } = useBacklog();
   const [level, setLevel] = useState<Level>('B1');
   const [count, setCount] = useState(25);
   const [status, setStatus] = useState<Status>('idle');
@@ -69,9 +69,7 @@ export default function GeneratePage() {
         });
       } else {
         // Add to backlog
-        const { addManyToBacklog } = await import('@/hooks/use-backlog');
-        // This will be handled in the component
-        alert('Backlog feature: Words will be added to backlog queue');
+        addManyToBacklog(enriched);
       }
 
       setStatus('completed');
