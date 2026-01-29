@@ -69,7 +69,7 @@ export default function GeneratePage() {
         });
       } else {
         // Add to backlog
-        addManyToBacklog(enriched);
+        addManyToBacklog(enriched, Date.now(), 'medium', 'generated');
       }
 
       setStatus('completed');
