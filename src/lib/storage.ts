@@ -11,6 +11,8 @@ const STORAGE_KEYS = {
 const DEFAULT_SETTINGS: UserSettings = {
   dailyNewWords: 10,
   theme: 'system',
+  isLockedMode: false,
+  reviewIntervals: [1, 2, 4, 7, 14],
   autoAddFromBacklog: true,
   maxBacklogSize: 500,
 };
@@ -102,13 +104,14 @@ export function updateTodayStats(
   newWords: number = 0,
   reviewed: number = 0,
   correct: number = 0,
-  incorrect: number = 0
+  incorrect: number = 0,
+  hard: number = 0
 ): void {
   const stats = loadDailyStats();
   const today = new Date().toISOString().split('T')[0];
-  
+
   const todayIndex = stats.findIndex((s) => s.date === today);
-  
+
   if (todayIndex >= 0) {
     stats[todayIndex] = {
       date: today,
@@ -116,6 +119,7 @@ export function updateTodayStats(
       reviewed: stats[todayIndex].reviewed + reviewed,
       correct: stats[todayIndex].correct + correct,
       incorrect: stats[todayIndex].incorrect + incorrect,
+      hard: (stats[todayIndex].hard || 0) + hard,
     };
   } else {
     stats.push({
@@ -124,9 +128,10 @@ export function updateTodayStats(
       reviewed,
       correct,
       incorrect,
+      hard,
     });
   }
-  
+
   saveDailyStats(stats);
 }
 

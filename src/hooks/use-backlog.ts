@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { BacklogItem, WordData, Priority, BacklogSource } from '@/types';
 import { loadBacklog, saveBacklog, getReadyBacklogItems } from '@/lib/storage';
 import { generateId } from '@/lib/utils';
+import { generateNormalizedKey } from '@/lib/duplicate-detector';
 
 export function useBacklog() {
   const [backlog, setBacklog] = useState<BacklogItem[]>([]);
@@ -31,6 +32,7 @@ export function useBacklog() {
   ) => {
     const item: BacklogItem = {
       id: generateId(),
+      normalizedKey: generateNormalizedKey(wordData.word),
       wordData,
       scheduledFor,
       priority,
@@ -48,6 +50,7 @@ export function useBacklog() {
   ) => {
     const items: BacklogItem[] = words.map((wordData) => ({
       id: generateId(),
+      normalizedKey: generateNormalizedKey(wordData.word),
       wordData,
       scheduledFor,
       priority,

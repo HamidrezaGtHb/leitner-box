@@ -1,5 +1,5 @@
-import { LeitnerCard, LockedModeState } from '@/types';
-import { computeDueCards, computeNextDueIn } from './leitner';
+import { LeitnerCard, LockedModeState, EnhancedLockedModeState } from '@/types';
+import { computeDueCards, computeNextDueIn, getBoxStats, computeDueCardsInBox, computeNextDueInBox } from './leitner';
 
 /**
  * Check if a card can be accessed in locked mode
@@ -86,4 +86,69 @@ export function getLockedEmptyMessage(
   } else {
     return `Come back in ${minutes} minute${minutes > 1 ? 's' : ''} for your next review!`;
   }
+}
+
+// ============================================
+// Enhanced Locked Mode Functions (Per-Box)
+// ============================================
+
+/**
+ * Check if a specific box can be accessed in locked mode
+ */
+export function canAccessBox(
+  cards: LeitnerCard[],
+  boxIndex: 1 | 2 | 3 | 4 | 5,
+  isLockedMode: boolean,
+  now: Date = new Date()
+): boolean {
+  if (!isLockedMode) return true;
+
+  // In locked mode, can only access box if it has due cards
+  const dueInBox = computeDueCardsInBox(cards, boxIndex, now);
+  return dueInBox.length > 0;
+}
+
+/**
+ * Get all accessible boxes in locked mode
+ */
+export function getAccessibleBoxes(
+  cards: LeitnerCard[],
+  isLockedMode: boolean,
+  now: Date = new Date()
+): (1 | 2 | 3 | 4 | 5)[] {
+  if (!isLockedMode) return [1, 2, 3, 4, 5];
+
+  return ([1, 2, 3, 4, 5] as const).filter(
+    (boxIndex) => canAccessBox(cards, boxIndex, isLockedMode, now)
+  );
+}
+
+/**
+ * Get enhanced locked mode state with per-box info
+ */
+export function getEnhancedLockedModeState(
+  cards: LeitnerCard[],
+  isLockedMode: boolean,
+  now: Date = new Date()
+): EnhancedLockedModeState {
+  const dueCards = computeDueCards(cards, now);
+  const nextDueIn = computeNextDueIn(cards, now);
+
+  const boxStates = {} as EnhancedLockedModeState['boxStates'];
+  for (const boxIndex of [1, 2, 3, 4, 5] as const) {
+    const dueCount = computeDueCardsInBox(cards, boxIndex, now).length;
+    boxStates[boxIndex] = {
+      accessible: canAccessBox(cards, boxIndex, isLockedMode, now),
+      dueCount,
+      nextDueIn: computeNextDueInBox(cards, boxIndex, now),
+    };
+  }
+
+  return {
+    isEnabled: isLockedMode,
+    dueCount: dueCards.length,
+    nextDueIn,
+    accessibleBoxes: getAccessibleBoxes(cards, isLockedMode, now),
+    boxStates,
+  };
 }

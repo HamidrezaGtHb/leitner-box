@@ -1,4 +1,4 @@
-import { LeitnerCard, WordData, StrictLeitnerConfig } from '@/types';
+import { LeitnerCard, WordData, StrictLeitnerConfig, BoxStats, DashboardStats } from '@/types';
 import { generateId } from './utils';
 
 // Default Leitner configuration
@@ -153,6 +153,87 @@ export function formatNextDueIn(milliseconds: number): string {
   if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''}`;
   if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''}`;
   return `${seconds} second${seconds > 1 ? 's' : ''}`;
+}
+
+// ============================================
+// Per-Box Statistics Functions
+// ============================================
+
+/**
+ * Compute due cards for a specific box
+ */
+export function computeDueCardsInBox(
+  cards: LeitnerCard[],
+  boxIndex: 1 | 2 | 3 | 4 | 5,
+  now: Date = new Date()
+): LeitnerCard[] {
+  return cards.filter(
+    (card) => card.boxIndex === boxIndex && card.nextReviewAt <= now.getTime()
+  );
+}
+
+/**
+ * Compute next due time for a specific box
+ * Returns null if no future cards in this box
+ */
+export function computeNextDueInBox(
+  cards: LeitnerCard[],
+  boxIndex: 1 | 2 | 3 | 4 | 5,
+  now: Date = new Date()
+): number | null {
+  const boxCards = cards
+    .filter((card) => card.boxIndex === boxIndex && card.nextReviewAt > now.getTime())
+    .sort((a, b) => a.nextReviewAt - b.nextReviewAt);
+
+  if (boxCards.length === 0) return null;
+  return boxCards[0].nextReviewAt - now.getTime();
+}
+
+/**
+ * Get complete statistics for a specific box
+ */
+export function getBoxStats(
+  cards: LeitnerCard[],
+  boxIndex: 1 | 2 | 3 | 4 | 5,
+  now: Date = new Date()
+): BoxStats {
+  const boxCards = getCardsByBox(cards, boxIndex);
+  return {
+    boxNumber: boxIndex,
+    totalCount: boxCards.length,
+    dueCount: computeDueCardsInBox(cards, boxIndex, now).length,
+    nextDueIn: computeNextDueInBox(cards, boxIndex, now),
+  };
+}
+
+/**
+ * Get complete dashboard statistics
+ */
+export function getDashboardStats(
+  cards: LeitnerCard[],
+  dailyLimit: number,
+  now: Date = new Date()
+): DashboardStats {
+  const todayString = now.toISOString().split('T')[0];
+  const newWordsToday = cards.filter((card) => {
+    const cardDate = new Date(card.createdAt).toISOString().split('T')[0];
+    return cardDate === todayString;
+  }).length;
+
+  return {
+    totalCards: cards.length,
+    totalDue: computeDueCards(cards, now).length,
+    nextDueIn: computeNextDueIn(cards, now),
+    boxes: {
+      1: getBoxStats(cards, 1, now),
+      2: getBoxStats(cards, 2, now),
+      3: getBoxStats(cards, 3, now),
+      4: getBoxStats(cards, 4, now),
+      5: getBoxStats(cards, 5, now),
+    },
+    newWordsToday,
+    dailyLimit,
+  };
 }
 
 // ============================================

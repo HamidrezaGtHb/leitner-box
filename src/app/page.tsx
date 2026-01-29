@@ -9,9 +9,9 @@ import { AIChat } from '@/components/ai-chat';
 import { AIChatFAB } from '@/components/ai-chat-fab';
 import { Loader2, BookOpen, Target, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import { LeitnerCard } from '@/types';
-import { computeNextDueIn } from '@/lib/leitner';
-import { createCard } from '@/lib/leitner';
+import { LeitnerCard, WordData } from '@/types';
+import { computeNextDueIn, createCard } from '@/lib/leitner';
+import { generateNormalizedKey } from '@/lib/duplicate-detector';
 
 export default function HomePage() {
   const { cards, dueCards, isLoaded, addCard } = useLeitner();
@@ -20,8 +20,10 @@ export default function HomePage() {
   const nextDueIn = computeNextDueIn(cards);
   const progress = isLoaded ? { newWordsToday: 0, totalCards: cards.length } : null;
 
-  const handleCardsCreated = async (newCards: LeitnerCard[]) => {
-    for (const card of newCards) {
+  const handleCardsCreated = async (wordDataList: WordData[]) => {
+    for (const wordData of wordDataList) {
+      const normalizedKey = generateNormalizedKey(wordData.word);
+      const card = createCard(wordData, normalizedKey);
       await addCard(card);
     }
   };

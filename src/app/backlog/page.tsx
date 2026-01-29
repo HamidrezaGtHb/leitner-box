@@ -27,14 +27,14 @@ export default function BacklogPage() {
       return;
     }
     
-    const card = createCard(item.wordData);
+    const card = createCard(item.wordData, item.normalizedKey);
     await addCard(card);
     removeFromBacklog(item.id);
   };
 
   const handleAddAllReady = async () => {
     for (const item of readyItems) {
-      const card = createCard(item.wordData);
+      const card = createCard(item.wordData, item.normalizedKey);
       await addCard(card);
       removeFromBacklog(item.id);
     }
@@ -278,10 +278,10 @@ export default function BacklogPage() {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           </TabsContent>
         </Tabs>

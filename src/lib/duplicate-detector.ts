@@ -10,7 +10,12 @@ import { isSupabaseConfigured } from './supabase';
 
 /**
  * Generate normalized key for deduplication
- * Removes articles, normalizes spaces, lowercase, keeps German characters
+ * - Removes articles (der, die, das, ein, eine)
+ * - Normalizes German umlauts (ä→ae, ö→oe, ü→ue, ß→ss)
+ * - Lowercase, trim, normalize spaces
+ * - Remove special characters
+ *
+ * This ensures "über", "ueber", "Über" all map to the same key
  */
 export function generateNormalizedKey(word: string): string {
   let normalized = word
@@ -21,8 +26,18 @@ export function generateNormalizedKey(word: string): string {
   // Remove German articles at the beginning
   normalized = normalized.replace(/^(der|die|das|ein|eine)\s+/i, '');
 
-  // Remove special characters except German umlauts and ß
-  normalized = normalized.replace(/[^\w\säöüß]/gi, '');
+  // Normalize German umlauts and eszett BEFORE removing special chars
+  normalized = normalized
+    .replace(/ä/g, 'ae')
+    .replace(/ö/g, 'oe')
+    .replace(/ü/g, 'ue')
+    .replace(/ß/g, 'ss');
+
+  // Remove special characters (now no umlauts to preserve)
+  normalized = normalized.replace(/[^\w\s]/gi, '');
+
+  // Final trim
+  normalized = normalized.trim();
 
   return normalized;
 }
@@ -165,4 +180,46 @@ export async function checkMultipleDuplicates(
   }
 
   return { duplicates, unique, details };
+}
+
+/**
+ * Migration: Update normalizedKey for all cards
+ * Call this to re-normalize keys after algorithm changes
+ */
+import type { LeitnerCard, BacklogItem } from '@/types';
+
+export function migrateCardNormalizedKeys(cards: LeitnerCard[]): LeitnerCard[] {
+  return cards.map(card => ({
+    ...card,
+    normalizedKey: generateNormalizedKey(card.wordData.word)
+  }));
+}
+
+export function migrateBacklogNormalizedKeys(backlog: BacklogItem[]): BacklogItem[] {
+  return backlog.map(item => ({
+    ...item,
+    normalizedKey: generateNormalizedKey(item.wordData.word)
+  }));
+}
+
+/**
+ * Enhanced duplicate check result with human-readable message
+ */
+export interface DuplicateCheckResult {
+  exists: boolean;
+  location: 'cards' | 'backlog' | null;
+  existingWord?: string;
+  message?: string;
+}
+
+export function formatDuplicateMessage(
+  word: string,
+  location: 'cards' | 'backlog',
+  existingWord: string
+): string {
+  const locationText = location === 'cards' ? 'your active cards' : 'your backlog';
+  if (word.toLowerCase() === existingWord.toLowerCase()) {
+    return `"${word}" already exists in ${locationText}`;
+  }
+  return `"${word}" already exists in ${locationText} as "${existingWord}"`;
 }

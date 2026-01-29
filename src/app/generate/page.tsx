@@ -8,6 +8,8 @@ import { BatchProgress } from '@/components/batch-progress';
 import { generateWordList, batchEnrichWords } from '@/lib/ai-agent';
 import { useLeitner } from '@/hooks/use-leitner';
 import { useBacklog } from '@/hooks/use-backlog';
+import { createCard } from '@/lib/leitner';
+import { generateNormalizedKey } from '@/lib/duplicate-detector';
 import { Sparkles, Plus, Download, Loader2, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -17,7 +19,7 @@ type Status = 'idle' | 'generating' | 'enriching' | 'completed' | 'error';
 const COUNT_OPTIONS = [10, 25, 50, 100];
 
 export default function GeneratePage() {
-  const { addWord } = useLeitner();
+  const { addCard } = useLeitner();
   const { addManyToBacklog } = useBacklog();
   const [level, setLevel] = useState<Level>('B1');
   const [count, setCount] = useState(25);
@@ -65,7 +67,9 @@ export default function GeneratePage() {
       if (destination === 'active') {
         // Add directly to active cards
         enriched.forEach((wordData) => {
-          addWord(wordData);
+          const normalizedKey = generateNormalizedKey(wordData.word);
+          const card = createCard(wordData, normalizedKey);
+          addCard(card);
         });
       } else {
         // Add to backlog

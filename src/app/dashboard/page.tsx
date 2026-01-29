@@ -15,7 +15,8 @@ import {
   AlertTriangle,
   Lock
 } from 'lucide-react';
-import { computeNextDueIn, getCardsByBox } from '@/lib/leitner';
+import { computeNextDueIn, getCardsByBox, getDashboardStats, formatNextDueIn } from '@/lib/leitner';
+import { CountdownFromMillis } from '@/components/countdown-timer';
 
 export default function DashboardPage() {
   const { cards, dueCards, isLoaded } = useLeitner();
@@ -36,13 +37,7 @@ export default function DashboardPage() {
   const totalReviews = totalCorrect + totalIncorrect + totalHard;
   const accuracy = totalReviews > 0 ? ((totalCorrect / totalReviews) * 100).toFixed(1) : 0;
 
-  const boxCounts = {
-    1: getCardsByBox(cards, 1).length,
-    2: getCardsByBox(cards, 2).length,
-    3: getCardsByBox(cards, 3).length,
-    4: getCardsByBox(cards, 4).length,
-    5: getCardsByBox(cards, 5).length,
-  };
+  const dashboardStats = getDashboardStats(cards, settings.dailyNewWords);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -181,22 +176,35 @@ export default function DashboardPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {([1, 2, 3, 4, 5] as const).map((boxNum) => {
-            const count = boxCounts[boxNum];
-            const percentage = cards.length > 0 ? (count / cards.length) * 100 : 0;
+            const boxStats = dashboardStats.boxes[boxNum];
+            const percentage = cards.length > 0 ? (boxStats.totalCount / cards.length) * 100 : 0;
             const interval = settings.reviewIntervals[boxNum - 1];
-            
+
             return (
               <div key={boxNum} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">Box {boxNum}</Badge>
                     <span className="text-sm text-muted-foreground">
-                      Review every {interval} day{interval > 1 ? 's' : ''}
+                      Every {interval} day{interval > 1 ? 's' : ''}
                     </span>
                   </div>
-                  <span className="text-sm font-semibold">
-                    {count} cards ({percentage.toFixed(0)}%)
-                  </span>
+                  <div className="flex items-center gap-4">
+                    {boxStats.dueCount > 0 && (
+                      <Badge variant="destructive" className="gap-1">
+                        {boxStats.dueCount} due
+                      </Badge>
+                    )}
+                    {boxStats.nextDueIn !== null && boxStats.dueCount === 0 && (
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <CountdownFromMillis milliseconds={boxStats.nextDueIn} />
+                      </span>
+                    )}
+                    <span className="text-sm font-semibold">
+                      {boxStats.totalCount} cards
+                    </span>
+                  </div>
                 </div>
                 <Progress value={percentage} />
               </div>

@@ -45,7 +45,7 @@ export function useDuplicateCheck() {
     const threshold = 85;
     
     if (bestMatch && bestMatch.similarity >= threshold) {
-      const boxNumber = bestMatch.card.box;
+      const boxNumber = bestMatch.card.boxIndex;
       return {
         isDuplicate: true,
         existingCard: bestMatch.card,

@@ -8,6 +8,8 @@ export function useSettings() {
   const [settings, setSettings] = useState<UserSettings>({
     dailyNewWords: 10,
     theme: 'system',
+    isLockedMode: false,
+    reviewIntervals: [1, 2, 4, 7, 14],
     autoAddFromBacklog: true,
     maxBacklogSize: 500,
   });

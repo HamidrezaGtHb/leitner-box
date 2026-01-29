@@ -222,8 +222,17 @@ export async function processChatCommand(
         }
       }
       
+      // Build detailed response
+      let responseText = `I found ${words.length} German words in the image.\n`;
+      responseText += `✅ Created ${enrichedCards.length} cards`;
+      if (duplicates.length > 0) {
+        const skippedPreview = duplicates.slice(0, 5).join(', ');
+        const more = duplicates.length > 5 ? `, +${duplicates.length - 5} more` : '';
+        responseText += `\n⚠️ Skipped ${duplicates.length} duplicates: ${skippedPreview}${more}`;
+      }
+
       return {
-        response: `I found ${words.length} German words in the image. Created ${enrichedCards.length} cards${duplicates.length > 0 ? ` (${duplicates.length} duplicates skipped)` : ''}.`,
+        response: responseText,
         cards: enrichedCards,
         duplicates,
       };
@@ -250,8 +259,17 @@ export async function processChatCommand(
         }
       }
       
+      // Build detailed response
+      let responseText = `Generated ${count} ${level} words${topic ? ` about ${topic}` : ''}.\n`;
+      responseText += `✅ Created ${enrichedCards.length} cards`;
+      if (duplicates.length > 0) {
+        const skippedPreview = duplicates.slice(0, 5).join(', ');
+        const more = duplicates.length > 5 ? `, +${duplicates.length - 5} more` : '';
+        responseText += `\n⚠️ Skipped ${duplicates.length} duplicates: ${skippedPreview}${more}`;
+      }
+
       return {
-        response: `I generated ${count} ${level} words${topic ? ` about ${topic}` : ''}. Created ${enrichedCards.length} cards${duplicates.length > 0 ? ` (${duplicates.length} duplicates skipped)` : ''}.`,
+        response: responseText,
         cards: enrichedCards,
         duplicates,
       };

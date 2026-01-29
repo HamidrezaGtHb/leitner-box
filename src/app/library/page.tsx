@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WordCard } from '@/components/word-card';
-import { Search, BookOpen, Lock, Unlock } from 'lucide-react';
-import { canViewLibrary } from '@/lib/locked-mode';
+import { Search, BookOpen, Lock, Unlock, Clock } from 'lucide-react';
+import { canViewLibrary, getEnhancedLockedModeState } from '@/lib/locked-mode';
+import { Badge } from '@/components/ui/badge';
+import { CountdownFromMillis } from '@/components/countdown-timer';
 
 export default function LibraryPage() {
   const { cards, deleteCard, isLoaded } = useLeitner();
@@ -77,6 +79,9 @@ export default function LibraryPage() {
     4: filteredCards.filter((c) => c.boxIndex === 4),
     5: filteredCards.filter((c) => c.boxIndex === 5),
   };
+
+  // Get enhanced locked mode state for per-box info
+  const lockedState = getEnhancedLockedModeState(cards, settings.isLockedMode);
 
   return (
     <div className="max-w-7xl mx-auto space-y-8">
@@ -198,28 +203,63 @@ export default function LibraryPage() {
           </TabsContent>
 
           <TabsContent value="boxes" className="space-y-6 mt-6">
-            {([1, 2, 3, 4, 5] as const).map((boxNum) => (
-              <div key={boxNum}>
-                <h3 className="text-xl font-semibold mb-4">
-                  Box {boxNum} ({byBox[boxNum].length} cards)
-                </h3>
-                {byBox[boxNum].length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {byBox[boxNum].map((card) => (
-                      <WordCard
-                        key={card.id}
-                        wordData={card.wordData}
-                        onDelete={() => deleteCard(card.id)}
-                        blurBack={settings.isLockedMode && !showUnlockWarning}
-                        showDelete={true}
-                      />
-                    ))}
+            {([1, 2, 3, 4, 5] as const).map((boxNum) => {
+              const boxState = lockedState.boxStates[boxNum];
+              const isBoxAccessible = !settings.isLockedMode || boxState.accessible || showUnlockWarning;
+
+              return (
+                <div key={boxNum}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-xl font-semibold">
+                      Box {boxNum} ({byBox[boxNum].length} cards)
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {boxState.dueCount > 0 && (
+                        <Badge variant="destructive">{boxState.dueCount} due</Badge>
+                      )}
+                      {settings.isLockedMode && !boxState.accessible && boxState.nextDueIn && !showUnlockWarning && (
+                        <Badge variant="outline" className="gap-1">
+                          <Clock className="h-3 w-3" />
+                          <CountdownFromMillis milliseconds={boxState.nextDueIn} />
+                        </Badge>
+                      )}
+                      {settings.isLockedMode && !boxState.accessible && !showUnlockWarning && (
+                        <Badge variant="secondary" className="gap-1">
+                          <Lock className="h-3 w-3" />
+                          Locked
+                        </Badge>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No cards in this box yet</p>
-                )}
-              </div>
-            ))}
+                  {byBox[boxNum].length > 0 ? (
+                    isBoxAccessible ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {byBox[boxNum].map((card) => (
+                          <WordCard
+                            key={card.id}
+                            wordData={card.wordData}
+                            onDelete={() => deleteCard(card.id)}
+                            blurBack={settings.isLockedMode && !showUnlockWarning}
+                            showDelete={true}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <Card className="bg-muted/50">
+                        <CardContent className="py-8 text-center">
+                          <Lock className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+                          <p className="text-muted-foreground">
+                            Box locked until cards are due
+                          </p>
+                        </CardContent>
+                      </Card>
+                    )
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No cards in this box yet</p>
+                  )}
+                </div>
+              );
+            })}
           </TabsContent>
         </Tabs>
       )}

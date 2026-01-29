@@ -114,6 +114,34 @@ export interface LockedModeState {
   nextDueIn: number | null; // milliseconds until next card
 }
 
+// Per-box statistics
+export interface BoxStats {
+  boxNumber: 1 | 2 | 3 | 4 | 5;
+  totalCount: number;
+  dueCount: number;
+  nextDueIn: number | null; // milliseconds until next card in this box
+}
+
+// Dashboard statistics
+export interface DashboardStats {
+  totalCards: number;
+  totalDue: number;
+  nextDueIn: number | null;
+  boxes: Record<1 | 2 | 3 | 4 | 5, BoxStats>;
+  newWordsToday: number;
+  dailyLimit: number;
+}
+
+// Enhanced locked mode state with per-box info
+export interface EnhancedLockedModeState extends LockedModeState {
+  accessibleBoxes: (1 | 2 | 3 | 4 | 5)[];
+  boxStates: Record<1 | 2 | 3 | 4 | 5, {
+    accessible: boolean;
+    dueCount: number;
+    nextDueIn: number | null;
+  }>;
+}
+
 // Auth types
 export interface User {
   id: string;

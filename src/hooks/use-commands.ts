@@ -3,8 +3,11 @@
 import { useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLeitner } from './use-leitner';
+import { useSettings } from './use-settings';
 import { enrichWord, generateWordList, batchEnrichWords } from '@/lib/ai-agent';
 import { parseCommand, CommandType } from '@/lib/command-parser';
+import { createCard } from '@/lib/leitner';
+import { generateNormalizedKey } from '@/lib/duplicate-detector';
 import {
   Home,
   BookOpen,
@@ -32,8 +35,14 @@ export interface Command {
 
 export function useCommands() {
   const router = useRouter();
-  const { addWord, canAddNewWord } = useLeitner();
-  
+  const { addCard, getProgress } = useLeitner();
+  const { settings } = useSettings();
+
+  const canAddNewWord = () => {
+    const progress = getProgress();
+    return progress.newWordsToday < settings.dailyNewWords;
+  };
+
   const commands: Command[] = useMemo(() => [
     // Actions
     {
@@ -48,9 +57,11 @@ export function useCommands() {
         if (!canAddNewWord()) {
           throw new Error('Daily limit reached');
         }
-        
+
         const wordData = await enrichWord(args.word, 'gemini');
-        addWord(wordData);
+        const normalizedKey = generateNormalizedKey(wordData.word);
+        const card = createCard(wordData, normalizedKey);
+        await addCard(card);
       },
     },
     {
@@ -154,7 +165,8 @@ export function useCommands() {
         router.push('/settings');
       },
     },
-  ], [router, addWord, canAddNewWord]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ], [router, addCard, settings.dailyNewWords]);
   
   const executeCommand = useCallback(async (commandId: string, args?: any) => {
     const command = commands.find((c) => c.id === commandId);

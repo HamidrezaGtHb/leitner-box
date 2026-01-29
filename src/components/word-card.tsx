@@ -10,9 +10,11 @@ interface WordCardProps {
   wordData: WordData;
   onDelete?: () => void;
   showDelete?: boolean;
+  /** Blur the back content (meaning, examples) for locked mode */
+  blurBack?: boolean;
 }
 
-export function WordCard({ wordData, onDelete, showDelete = false }: WordCardProps) {
+export function WordCard({ wordData, onDelete, showDelete = false, blurBack = false }: WordCardProps) {
   const handleSpeak = () => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(wordData.word);
@@ -52,15 +54,22 @@ export function WordCard({ wordData, onDelete, showDelete = false }: WordCardPro
           <p className="text-sm text-muted-foreground">Plural: {wordData.plural}</p>
         )}
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div>
+      <CardContent className={cn("space-y-4", blurBack && "relative")}>
+        {/* Blur overlay for locked mode */}
+        {blurBack && (
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center rounded-b-lg">
+            <p className="text-sm text-muted-foreground">Content hidden in locked mode</p>
+          </div>
+        )}
+
+        <div className={cn(blurBack && "blur-sm select-none")}>
           <p className="font-vazirmatn text-lg" dir="rtl">
             {wordData.meaning}
           </p>
         </div>
 
         {wordData.verbForms && (
-          <div className="space-y-1 text-sm bg-muted p-3 rounded-md">
+          <div className={cn("space-y-1 text-sm bg-muted p-3 rounded-md", blurBack && "blur-sm select-none")}>
             <p>
               <span className="font-semibold">Präsens:</span>{' '}
               {wordData.verbForms.presens}
@@ -77,13 +86,13 @@ export function WordCard({ wordData, onDelete, showDelete = false }: WordCardPro
         )}
 
         {wordData.prepositions && (
-          <p className="text-sm">
+          <p className={cn("text-sm", blurBack && "blur-sm select-none")}>
             <span className="font-semibold">Prepositions:</span>{' '}
             {wordData.prepositions}
           </p>
         )}
 
-        <div className="space-y-2">
+        <div className={cn("space-y-2", blurBack && "blur-sm select-none")}>
           {wordData.examples.map((example, idx) => (
             <div key={idx} className="border-l-2 border-primary pl-3 space-y-1">
               <p className="text-sm">{example.de}</p>

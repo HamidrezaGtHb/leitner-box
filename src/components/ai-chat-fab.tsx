@@ -5,10 +5,10 @@ import { MessageSquarePlus, X } from 'lucide-react';
 import { Button } from './ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { AIChat } from './ai-chat';
-import { LeitnerCard } from '@/types';
+import { WordData } from '@/types';
 
 interface AIChatFABProps {
-  onCardsCreated?: (cards: LeitnerCard[]) => void;
+  onCardsCreated?: (cards: WordData[]) => void;
 }
 
 export function AIChatFAB({ onCardsCreated }: AIChatFABProps) {

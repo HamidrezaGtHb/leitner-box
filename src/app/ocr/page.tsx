@@ -10,6 +10,8 @@ import { extractGermanWordsFromImage, validateGermanWords } from '@/lib/ocr';
 import { batchEnrichWords } from '@/lib/ai-agent';
 import { useBacklog } from '@/hooks/use-backlog';
 import { useLeitner } from '@/hooks/use-leitner';
+import { createCard } from '@/lib/leitner';
+import { generateNormalizedKey } from '@/lib/duplicate-detector';
 import { Camera, Sparkles, CheckCircle2, Calendar } from 'lucide-react';
 import Link from 'next/link';
 
@@ -17,7 +19,7 @@ type Step = 'upload' | 'extracting' | 'selecting' | 'validating' | 'enriching' |
 
 export default function OCRPage() {
   const { addManyToBacklog } = useBacklog();
-  const { addWord } = useLeitner();
+  const { addCard } = useLeitner();
   const [step, setStep] = useState<Step>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [extractedWords, setExtractedWords] = useState<string[]>([]);
@@ -108,7 +110,11 @@ export default function OCRPage() {
       if (destination === 'backlog') {
         addManyToBacklog(enriched, Date.now(), 'medium', 'ocr');
       } else {
-        enriched.forEach((wordData) => addWord(wordData));
+        enriched.forEach((wordData) => {
+          const normalizedKey = generateNormalizedKey(wordData.word);
+          const card = createCard(wordData, normalizedKey);
+          addCard(card);
+        });
       }
 
       setStep('completed');
