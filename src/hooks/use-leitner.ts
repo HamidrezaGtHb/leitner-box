@@ -1,13 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { LeitnerCard, WordData, Progress } from '@/types';
 import {
-  loadCards,
-  saveCards,
+  loadCards as loadCardsLocal,
+  saveCards as saveCardsLocal,
   loadSettings,
-  updateTodayStats,
+  updateTodayStats as updateTodayStatsLocal,
 } from '@/lib/storage';
+import {
+  dbLoadCards,
+  dbSaveCard,
+  dbDeleteCard,
+  dbUpdateTodayStats,
+} from '@/lib/db';
+import { isSupabaseConfigured } from '@/lib/supabase';
 import {
   createCard,
   moveCardUp,
@@ -22,49 +29,107 @@ import { getTodayString } from '@/lib/utils';
 export function useLeitner() {
   const [cards, setCards] = useState<LeitnerCard[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [useSupabase, setUseSupabase] = useState(false);
 
   // Load cards on mount
   useEffect(() => {
-    const loadedCards = loadCards();
-    setCards(loadedCards);
-    setIsLoaded(true);
+    async function loadData() {
+      const supabaseEnabled = isSupabaseConfigured();
+      setUseSupabase(supabaseEnabled);
+
+      if (supabaseEnabled) {
+        try {
+          const dbCards = await dbLoadCards();
+          if (dbCards.length > 0) {
+            setCards(dbCards);
+          } else {
+            // Fallback to localStorage if Supabase is empty
+            const localCards = loadCardsLocal();
+            setCards(localCards);
+            // Migrate local cards to Supabase
+            for (const card of localCards) {
+              await dbSaveCard(card);
+            }
+          }
+        } catch (error) {
+          console.error('Error loading from Supabase:', error);
+          setCards(loadCardsLocal());
+        }
+      } else {
+        setCards(loadCardsLocal());
+      }
+      setIsLoaded(true);
+    }
+
+    loadData();
   }, []);
 
-  // Save cards whenever they change
+  // Save to localStorage as backup
   useEffect(() => {
     if (isLoaded) {
-      saveCards(cards);
+      saveCardsLocal(cards);
     }
   }, [cards, isLoaded]);
 
-  const addWord = (wordData: WordData) => {
-    const card = createCard(wordData);
-    setCards((prev) => [...prev, card]);
-    updateTodayStats(1, 0, 0, 0);
-  };
+  const updateTodayStats = useCallback(
+    async (newWords: number, reviewed: number, correct: number, incorrect: number) => {
+      updateTodayStatsLocal(newWords, reviewed, correct, incorrect);
+      if (useSupabase) {
+        await dbUpdateTodayStats(newWords, reviewed, correct, incorrect);
+      }
+    },
+    [useSupabase]
+  );
 
-  const reviewCard = (cardId: string, correct: boolean) => {
-    setCards((prev) =>
-      prev.map((card) => {
-        if (card.id === cardId) {
-          const updatedCard = correct ? moveCardUp(card) : moveCardDown(card);
-          updateTodayStats(0, 1, correct ? 1 : 0, correct ? 0 : 1);
-          return updatedCard;
-        }
-        return card;
-      })
-    );
-  };
+  const addWord = useCallback(
+    async (wordData: WordData) => {
+      const card = createCard(wordData);
+      setCards((prev) => [...prev, card]);
+      await updateTodayStats(1, 0, 0, 0);
+      if (useSupabase) {
+        await dbSaveCard(card);
+      }
+    },
+    [useSupabase, updateTodayStats]
+  );
 
-  const deleteCard = (cardId: string) => {
-    setCards((prev) => prev.filter((card) => card.id !== cardId));
-  };
+  const reviewCard = useCallback(
+    async (cardId: string, correct: boolean) => {
+      let updatedCard: LeitnerCard | null = null;
 
-  const getProgress = (): Progress => {
+      setCards((prev) =>
+        prev.map((card) => {
+          if (card.id === cardId) {
+            updatedCard = correct ? moveCardUp(card) : moveCardDown(card);
+            return updatedCard;
+          }
+          return card;
+        })
+      );
+
+      await updateTodayStats(0, 1, correct ? 1 : 0, correct ? 0 : 1);
+
+      if (useSupabase && updatedCard) {
+        await dbSaveCard(updatedCard);
+      }
+    },
+    [useSupabase, updateTodayStats]
+  );
+
+  const deleteCard = useCallback(
+    async (cardId: string) => {
+      setCards((prev) => prev.filter((card) => card.id !== cardId));
+      if (useSupabase) {
+        await dbDeleteCard(cardId);
+      }
+    },
+    [useSupabase]
+  );
+
+  const getProgress = useCallback((): Progress => {
     const settings = loadSettings();
     const todayString = getTodayString();
-    const dueCards = getDueCards(cards);
-    const newCards = getNewCards(cards);
+    const due = getDueCards(cards);
 
     const cardsInBox = {
       1: getCardsByBox(cards, 1).length,
@@ -82,23 +147,24 @@ export function useLeitner() {
     return {
       totalCards: cards.length,
       cardsInBox,
-      cardsDueToday: dueCards.length,
+      cardsDueToday: due.length,
       newWordsToday,
-      studiedToday: 0, // Will be tracked in daily stats
+      studiedToday: 0,
       correctToday: 0,
       incorrectToday: 0,
       lastStudyDate: todayString,
     };
-  };
+  }, [cards]);
 
-  const canAddNewWord = (): boolean => {
+  const canAddNewWord = useCallback((): boolean => {
     const settings = loadSettings();
     return !hasReachedDailyLimit(cards, settings.dailyNewWords);
-  };
+  }, [cards]);
 
   return {
     cards,
     isLoaded,
+    useSupabase,
     addWord,
     reviewCard,
     deleteCard,
