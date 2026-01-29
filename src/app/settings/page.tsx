@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import { useSettings } from '@/hooks/use-settings';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Bot, Target, Palette, CheckCircle2 } from 'lucide-react';
+import { Bot, Target, Palette, CheckCircle2, Lock } from 'lucide-react';
 import { useTheme } from 'next-themes';
 
 const DAILY_LIMITS = [5, 10, 15] as const;
@@ -46,21 +49,130 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Customize your learning experience</p>
       </div>
 
-      <Tabs defaultValue="provider" className="w-full">
+      <Tabs defaultValue="learning" className="w-full">
         <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="provider" className="gap-2">
-            <Bot className="h-4 w-4" />
-            AI Provider
-          </TabsTrigger>
           <TabsTrigger value="learning" className="gap-2">
             <Target className="h-4 w-4" />
             Learning
+          </TabsTrigger>
+          <TabsTrigger value="provider" className="gap-2">
+            <Bot className="h-4 w-4" />
+            AI Provider
           </TabsTrigger>
           <TabsTrigger value="appearance" className="gap-2">
             <Palette className="h-4 w-4" />
             Appearance
           </TabsTrigger>
         </TabsList>
+
+        {/* Learning Settings */}
+        <TabsContent value="learning" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Goals</CardTitle>
+              <CardDescription>
+                Set your daily limit for new words
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">New Words Per Day</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DAILY_LIMITS.map((limit) => (
+                    <Button
+                      key={limit}
+                      variant={
+                        settings.dailyNewWords === limit ? 'default' : 'outline'
+                      }
+                      onClick={() => updateSettings({ dailyNewWords: limit })}
+                    >
+                      {limit} words
+                    </Button>
+                  ))}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Current: {settings.dailyNewWords} new words per day
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-5 w-5" />
+                Locked Mode
+              </CardTitle>
+              <CardDescription>
+                Enforce strict review discipline by blocking non-due cards
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <Label htmlFor="locked-mode" className="text-base">
+                    Enable Locked Mode
+                  </Label>
+                  <p className="text-sm text-muted-foreground">
+                    Only review due cards, hide future boxes and library backs
+                  </p>
+                </div>
+                <Switch
+                  id="locked-mode"
+                  checked={settings.isLockedMode}
+                  onCheckedChange={(checked) => updateSettings({ isLockedMode: checked })}
+                />
+              </div>
+
+              {settings.isLockedMode && (
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    <Lock className="inline h-4 w-4 mr-1" />
+                    <strong>Locked Mode is active:</strong> You can only review due cards. Library and future boxes are restricted.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Review Intervals</CardTitle>
+              <CardDescription>
+                Days to wait before reviewing cards in each box (Strict Leitner)
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-5 gap-2">
+                {settings.reviewIntervals.map((interval, idx) => (
+                  <div key={idx} className="space-y-2">
+                    <Label htmlFor={`interval-${idx}`} className="text-xs">
+                      Box {idx + 1}
+                    </Label>
+                    <Input
+                      id={`interval-${idx}`}
+                      type="number"
+                      min="1"
+                      value={interval}
+                      onChange={(e) => {
+                        const newIntervals = [...settings.reviewIntervals];
+                        newIntervals[idx] = parseInt(e.target.value) || 1;
+                        updateSettings({ reviewIntervals: newIntervals });
+                      }}
+                      className="text-center"
+                    />
+                    <p className="text-xs text-center text-muted-foreground">
+                      {interval}d
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Default: [1, 2, 4, 7, 14] days. Customize for your learning pace.
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* AI Provider Settings */}
         <TabsContent value="provider" className="space-y-4">
@@ -116,39 +228,6 @@ export default function SettingsPage() {
                   'Save Preference'
                 )}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Learning Settings */}
-        <TabsContent value="learning" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Daily Goals</CardTitle>
-              <CardDescription>
-                Set your daily limit for new words
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">New Words Per Day</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {DAILY_LIMITS.map((limit) => (
-                    <Button
-                      key={limit}
-                      variant={
-                        settings.dailyNewWords === limit ? 'default' : 'outline'
-                      }
-                      onClick={() => updateSettings({ dailyNewWords: limit })}
-                    >
-                      {limit} words
-                    </Button>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Current: {settings.dailyNewWords} new words per day
-                </p>
-              </div>
             </CardContent>
           </Card>
         </TabsContent>

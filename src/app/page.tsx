@@ -1,33 +1,30 @@
 'use client';
 
-import { useState } from 'react';
 import { useLeitner } from '@/hooks/use-leitner';
 import { useSettings } from '@/hooks/use-settings';
-import { useBacklog } from '@/hooks/use-backlog';
-import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { WordCard } from '@/components/word-card';
-import { CommandPalette } from '@/components/command-palette';
-import { QuickActionsBar } from '@/components/quick-actions-bar';
-import { AIWidget } from '@/components/ai-widget';
-import { Loader2, BookOpen, Target, TrendingUp, Calendar, Sparkles } from 'lucide-react';
+import { AIChat } from '@/components/ai-chat';
+import { AIChatFAB } from '@/components/ai-chat-fab';
+import { Loader2, BookOpen, Target, TrendingUp, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import { LeitnerCard } from '@/types';
+import { computeNextDueIn } from '@/lib/leitner';
+import { createCard } from '@/lib/leitner';
 
 export default function HomePage() {
-  const { cards, getProgress, dueCards, isLoaded } = useLeitner();
+  const { cards, dueCards, isLoaded, addCard } = useLeitner();
   const { settings } = useSettings();
-  const { readyItems } = useBacklog();
-  const [isCommandOpen, setIsCommandOpen] = useState(false);
 
-  // Setup keyboard shortcuts
-  useKeyboardShortcuts({
-    onCommandPalette: () => setIsCommandOpen(true),
-  });
+  const nextDueIn = computeNextDueIn(cards);
+  const progress = isLoaded ? { newWordsToday: 0, totalCards: cards.length } : null;
 
-  const progress = isLoaded ? getProgress() : null;
-  const recentCards = cards.slice(-5).reverse();
+  const handleCardsCreated = async (newCards: LeitnerCard[]) => {
+    for (const card of newCards) {
+      await addCard(card);
+    }
+  };
 
   if (!isLoaded) {
     return (
@@ -47,13 +44,18 @@ export default function HomePage() {
         <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
           AI-powered spaced repetition system for learning German vocabulary
         </p>
-        <p className="text-sm text-muted-foreground">
-          Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Cmd+K</kbd> to open command palette
-        </p>
+        <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
+          <span className="hidden lg:inline">
+            Press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Cmd+K</kbd> for AI
+          </span>
+          <span className="lg:hidden">
+            Tap the <span className="text-primary font-semibold">+ button</span> below for AI
+          </span>
+        </div>
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Due Today</CardTitle>
@@ -61,13 +63,13 @@ export default function HomePage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{dueCards.length}</div>
-            <p className="text-xs text-muted-foreground">Cards ready to review</p>
+            <p className="text-xs text-muted-foreground">Cards ready</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Words Today</CardTitle>
+            <CardTitle className="text-sm font-medium">New Today</CardTitle>
             <Target className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -75,7 +77,7 @@ export default function HomePage() {
               {progress?.newWordsToday} / {settings.dailyNewWords}
             </div>
             <Progress
-              value={(progress?.newWordsToday || 0) / settings.dailyNewWords * 100}
+              value={((progress?.newWordsToday || 0) / settings.dailyNewWords) * 100}
               className="mt-2"
             />
           </CardContent>
@@ -83,105 +85,127 @@ export default function HomePage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Backlog Ready</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Next Review</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{readyItems.length}</div>
-            <p className="text-xs text-muted-foreground">Words ready to add</p>
+            <div className="text-2xl font-bold">
+              {nextDueIn !== null ? formatDuration(nextDueIn) : 'Now'}
+            </div>
+            <p className="text-xs text-muted-foreground">Until next card</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Cards</CardTitle>
+            <CardTitle className="text-sm font-medium">Total</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{progress?.totalCards || 0}</div>
-            <p className="text-xs text-muted-foreground">In your collection</p>
+            <p className="text-xs text-muted-foreground">Cards total</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions Bar */}
-      <QuickActionsBar onCommandPaletteOpen={() => setIsCommandOpen(true)} />
-
-      {/* Call to Action - Review */}
-      {dueCards.length > 0 && (
-        <Card className="bg-primary/5 border-primary">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <h3 className="text-lg font-semibold">Ready to Review?</h3>
-              <p className="text-sm text-muted-foreground">
-                You have {dueCards.length} cards waiting for review
+      {/* Leitner Guidance Card */}
+      <Card className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-blue-200 dark:border-blue-800">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <AlertCircle className="h-5 w-5 text-blue-600" />
+            What Should I Do Now?
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {dueCards.length > 0 ? (
+            <div className="space-y-2">
+              <p className="text-lg font-semibold text-green-700 dark:text-green-400">
+                ✅ Review your due cards first!
               </p>
+              <p className="text-sm text-muted-foreground">
+                You have <strong>{dueCards.length} cards</strong> ready for review. According to the Leitner system, 
+                reviewing cards on time is the priority.
+              </p>
+              <Link href="/review">
+                <Button size="lg" className="mt-2">
+                  Start Review ({dueCards.length} cards)
+                </Button>
+              </Link>
             </div>
-            <Link href="/review">
-              <Button size="lg">Start Review</Button>
-            </Link>
+          ) : (
+            <div className="space-y-2">
+              {nextDueIn !== null && nextDueIn > 0 ? (
+                <>
+                  <p className="text-lg font-semibold text-blue-700 dark:text-blue-400">
+                    ⏰ Next review in {formatDuration(nextDueIn)}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You can add new words now if you haven't reached your daily limit ({settings.dailyNewWords} per day).
+                    Use the AI assistant below to add words!
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-semibold text-green-700 dark:text-green-400">
+                    ✨ Ready to add new words!
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    You have no cards due. It's a great time to add new vocabulary using the AI assistant below.
+                  </p>
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* AI Chat - Desktop Only */}
+      <div className="hidden lg:block">
+        <Card>
+          <CardHeader>
+            <CardTitle>AI Assistant</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Ask for words, upload images for OCR, or request specific topics
+            </p>
+          </CardHeader>
+          <CardContent>
+            <AIChat onCardsCreated={handleCardsCreated} />
           </CardContent>
         </Card>
-      )}
+      </div>
 
-      {/* Backlog CTA */}
-      {readyItems.length > 0 && (
-        <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
-          <CardContent className="flex items-center justify-between p-6">
-            <div>
-              <h3 className="text-lg font-semibold">Words Ready in Backlog</h3>
-              <p className="text-sm text-muted-foreground">
-                {readyItems.length} words are scheduled for today
-              </p>
-            </div>
-            <Link href="/backlog">
-              <Button size="lg" className="gap-2">
-                <Calendar className="h-4 w-4" />
-                View Backlog
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Recent Words */}
-      {recentCards.length > 0 && (
-        <div className="space-y-4">
-          <h2 className="text-2xl font-bold">Recent Words</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {recentCards.map((card) => (
-              <WordCard key={card.id} wordData={card.wordData} />
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Floating Action Button - Mobile Only */}
+      <AIChatFAB onCardsCreated={handleCardsCreated} />
 
       {/* Empty State */}
       {cards.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center space-y-4">
-            <Sparkles className="h-16 w-16 mx-auto text-muted-foreground" />
-            <h2 className="text-2xl font-bold">Ready to Start Learning?</h2>
+            <BookOpen className="h-16 w-16 mx-auto text-muted-foreground" />
+            <h2 className="text-2xl font-bold">Start Your Learning Journey!</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Use the quick actions above or press <kbd className="px-2 py-1 bg-muted rounded text-xs font-mono">Cmd+K</kbd> to add your first words
+              Use the AI assistant to add your first German words. Try:
             </p>
-            <div className="flex gap-3 justify-center pt-4">
-              <Button onClick={() => setIsCommandOpen(true)}>
-                Open Command Palette
-              </Button>
-              <Link href="/generate">
-                <Button variant="outline">Generate Words</Button>
-              </Link>
+            <div className="flex flex-col gap-2 max-w-sm mx-auto text-sm text-left bg-muted p-4 rounded-lg">
+              <p>💬 "Add the word 'der Bahnhof'"</p>
+              <p>💬 "Give me 10 B2 words about travel"</p>
+              <p>📷 Upload an image to extract words</p>
             </div>
           </CardContent>
         </Card>
       )}
-
-      {/* Command Palette */}
-      <CommandPalette open={isCommandOpen} onOpenChange={setIsCommandOpen} />
-
-      {/* AI Widget */}
-      <AIWidget />
     </div>
   );
+}
+
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+
+  if (days > 0) return `${days}d`;
+  if (hours > 0) return `${hours}h`;
+  if (minutes > 0) return `${minutes}m`;
+  return `${seconds}s`;
 }

@@ -9,10 +9,13 @@ import { useTheme } from 'next-themes';
 import { useLeitner } from '@/hooks/use-leitner';
 import { cn } from '@/lib/utils';
 
+import { BarChart3 } from 'lucide-react';
+
 const navItems = [
   { href: '/', label: 'Home', icon: Home },
   { href: '/review', label: 'Review', icon: BookOpen, showDueBadge: true },
   { href: '/library', label: 'Library', icon: Library },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3 },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
