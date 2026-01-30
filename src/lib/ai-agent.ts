@@ -38,7 +38,7 @@ function determineWordType(response: AIWordResponse): WordType {
  */
 export async function enrichWord(
   word: string,
-  provider: 'openai' | 'gemini' = 'openai'
+  provider: 'openai' | 'gemini' = 'gemini'
 ): Promise<WordData> {
   try {
     const response = await callEnrichAPI(word, provider);
@@ -71,7 +71,7 @@ export async function enrichWord(
 export async function generateWordList(
   level: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2',
   count: number,
-  provider: 'openai' | 'gemini' = 'openai'
+  provider: 'openai' | 'gemini' = 'gemini'
 ): Promise<string[]> {
   try {
     const response = await fetch('/api/generate-words', {
@@ -181,10 +181,13 @@ export async function processChatCommand(
   cards: WordData[];
   duplicates: string[];
 }> {
+  // Use 'gemini' as default provider (consistent with use-commands.ts)
+  const provider: 'openai' | 'gemini' = 'gemini';
+
   try {
     const { extractTextFromImage, extractGermanWordsFromImage } = await import('./ocr');
     const { checkMultipleDuplicates } = await import('./duplicate-detector');
-    
+
     const intent = parseIntent(userMessage);
     
     // Handle image extraction
@@ -214,14 +217,14 @@ export async function processChatCommand(
       const enrichedCards: WordData[] = [];
       for (const word of unique.slice(0, 20)) { // Limit to 20 words
         try {
-          const wordData = await enrichWord(word);
+          const wordData = await enrichWord(word, provider);
           enrichedCards.push(wordData);
           await delay(500); // Rate limit
         } catch (err) {
           console.error(`Failed to enrich word: ${word}`, err);
         }
       }
-      
+
       // Build detailed response
       let responseText = `I found ${words.length} German words in the image.\n`;
       responseText += `✅ Created ${enrichedCards.length} cards`;
@@ -241,17 +244,17 @@ export async function processChatCommand(
     // Handle word generation
     if (intent === 'generate') {
       const { count, level, topic } = parseGenerateParams(userMessage);
-      
-      const words = await generateWordList(level as any, count);
-      
+
+      const words = await generateWordList(level as any, count, provider);
+
       // Check for duplicates
       const { unique, duplicates } = await checkMultipleDuplicates(words, userId);
-      
+
       // Enrich unique words
       const enrichedCards: WordData[] = [];
       for (const word of unique) {
         try {
-          const wordData = await enrichWord(word);
+          const wordData = await enrichWord(word, provider);
           enrichedCards.push(wordData);
           await delay(500); // Rate limit
         } catch (err) {
@@ -298,9 +301,9 @@ export async function processChatCommand(
           duplicates: [word],
         };
       }
-      
-      const wordData = await enrichWord(word);
-      
+
+      const wordData = await enrichWord(word, provider);
+
       return {
         response: `Created a card for "${word}".`,
         cards: [wordData],
