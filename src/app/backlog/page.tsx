@@ -1,291 +1,229 @@
 'use client';
 
-import { useState } from 'react';
-import { useBacklog } from '@/hooks/use-backlog';
-import { useLeitner } from '@/hooks/use-leitner';
-import { useSettings } from '@/hooks/use-settings';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { WordCard } from '@/components/word-card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Calendar, ArrowRight, Search, Trash2, Plus } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
-import { BacklogItem, Priority } from '@/types';
-import { createCard } from '@/lib/leitner';
+import { useEffect, useState } from 'react';
+import { createClient } from '@/lib/supabase/client';
+import { Nav } from '@/components/nav';
+import { BacklogItem } from '@/types';
+import { normalizeTerm } from '@/lib/utils';
+import { generateCardBack } from '@/lib/gemini';
 
 export default function BacklogPage() {
-  const { backlog, removeFromBacklog, updateBacklogItem, readyItems, futureItems, isLoaded } = useBacklog();
-  const { addCard } = useLeitner();
-  const { settings } = useSettings();
-  const [searchQuery, setSearchQuery] = useState('');
+  const [backlog, setBacklog] = useState<BacklogItem[]>([]);
+  const [newTerm, setNewTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [converting, setConverting] = useState<string | null>(null);
+  const supabase = createClient();
 
-  const handleAddToActive = async (item: BacklogItem) => {
-    const todayCount = 0; // Would need to get from stats
-    if (todayCount >= settings.dailyNewWords) {
-      alert('Daily limit reached! Please adjust your limit in Settings or wait until tomorrow.');
+  useEffect(() => {
+    loadBacklog();
+  }, []);
+
+  const loadBacklog = async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const { data } = await supabase
+      .from('backlog')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    setBacklog(data || []);
+    setLoading(false);
+  };
+
+  const handleAddToBacklog = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTerm.trim()) return;
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const normalized = normalizeTerm(newTerm);
+
+    // Check if already exists in cards or backlog
+    const { data: existingCard } = await supabase
+      .from('cards')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('term_normalized', normalized)
+      .single();
+
+    if (existingCard) {
+      alert('This term already exists in your cards!');
       return;
     }
-    
-    const card = createCard(item.wordData, item.normalizedKey);
-    await addCard(card);
-    removeFromBacklog(item.id);
-  };
 
-  const handleAddAllReady = async () => {
-    for (const item of readyItems) {
-      const card = createCard(item.wordData, item.normalizedKey);
-      await addCard(card);
-      removeFromBacklog(item.id);
+    const { error } = await supabase.from('backlog').insert({
+      user_id: user.id,
+      term: newTerm.trim(),
+      term_normalized: normalized,
+    });
+
+    if (error) {
+      if (error.code === '23505') {
+        alert('This term already exists in your backlog!');
+      } else {
+        console.error('Error adding to backlog:', error);
+      }
+    } else {
+      setNewTerm('');
+      loadBacklog();
     }
   };
 
-  const handleUpdateSchedule = (id: string, days: number) => {
-    const newSchedule = Date.now() + days * 24 * 60 * 60 * 1000;
-    updateBacklogItem(id, { scheduledFor: newSchedule });
+  const handleConvertToCard = async (item: BacklogItem, useAI: boolean) => {
+    setConverting(item.id);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let cardBack;
+
+      if (useAI) {
+        // Generate with AI
+        cardBack = await generateCardBack({
+          term: item.term,
+          level: item.level || undefined,
+          pos: item.pos || undefined,
+        });
+      } else {
+        // Manual: create minimal back
+        cardBack = {
+          term: item.term,
+          language: 'de' as const,
+          level: item.level || 'B1',
+          pos: (item.pos || 'other') as any,
+          ipa: null,
+          meaning_fa: ['معنی را اضافه کنید'],
+          meaning_en: ['Add meaning'],
+          examples: [],
+          synonyms: [],
+          antonyms: [],
+          collocations: [],
+          register_note: null,
+          grammar: {},
+          learning_tips: [],
+        };
+      }
+
+      // Insert card
+      const { error } = await supabase.from('cards').insert({
+        user_id: user.id,
+        term: item.term,
+        term_normalized: item.term_normalized,
+        level: item.level,
+        pos: item.pos,
+        box: 1,
+        due_date: new Date().toISOString().split('T')[0], // Due today
+        back_json: cardBack,
+      });
+
+      if (error) {
+        console.error('Error creating card:', error);
+        alert('Error creating card');
+      } else {
+        // Remove from backlog
+        await supabase.from('backlog').delete().eq('id', item.id);
+        loadBacklog();
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error converting to card');
+    } finally {
+      setConverting(null);
+    }
   };
 
-  const handleUpdatePriority = (id: string, priority: Priority) => {
-    updateBacklogItem(id, { priority });
+  const handleDelete = async (id: string) => {
+    await supabase.from('backlog').delete().eq('id', id);
+    loadBacklog();
   };
 
-  const filteredBacklog = backlog.filter((item) => {
-    const query = searchQuery.toLowerCase();
+  if (loading) {
     return (
-      item.wordData.word.toLowerCase().includes(query) ||
-      item.wordData.meaning.toLowerCase().includes(query)
-    );
-  });
-
-  if (!isLoaded) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div>
+        <Nav />
+        <div className="max-w-4xl mx-auto p-4">Loading...</div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Backlog</h1>
-          <p className="text-muted-foreground">
-            Manage your future vocabulary queue
-          </p>
-        </div>
-        {readyItems.length > 0 && (
-          <Button onClick={handleAddAllReady} size="lg" className="gap-2">
-            <Plus className="h-5 w-5" />
-            Add All Ready ({readyItems.length})
-          </Button>
+    <div>
+      <Nav />
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
+        <h1 className="text-2xl font-bold">Backlog</h1>
+
+        {/* Add form */}
+        <form onSubmit={handleAddToBacklog} className="flex gap-2">
+          <input
+            type="text"
+            value={newTerm}
+            onChange={(e) => setNewTerm(e.target.value)}
+            placeholder="Add a German term (e.g., der Bahnhof)"
+            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <button
+            type="submit"
+            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Add
+          </button>
+        </form>
+
+        {/* Backlog list */}
+        {backlog.length === 0 ? (
+          <div className="text-center py-12 text-gray-600">
+            No items in backlog. Add some terms above!
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {backlog.map((item) => (
+              <div
+                key={item.id}
+                className="bg-white border rounded-lg p-4 flex items-center justify-between"
+              >
+                <div>
+                  <div className="font-semibold">{item.term}</div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(item.created_at).toLocaleDateString()}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleConvertToCard(item, true)}
+                    disabled={converting === item.id}
+                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                  >
+                    {converting === item.id ? 'Converting...' : 'AI Complete'}
+                  </button>
+                  <button
+                    onClick={() => handleConvertToCard(item, false)}
+                    disabled={converting === item.id}
+                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    Manual
+                  </button>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Ready Today</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {readyItems.length}
-            </div>
-            <p className="text-xs text-muted-foreground">Words available now</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Scheduled</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {futureItems.length}
-            </div>
-            <p className="text-xs text-muted-foreground">Words for later</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium">Total Backlog</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{backlog.length}</div>
-            <p className="text-xs text-muted-foreground">Total items</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Search */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="relative">
-            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search backlog..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Backlog Items */}
-      {backlog.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center space-y-4">
-            <Calendar className="h-16 w-16 mx-auto text-muted-foreground" />
-            <div>
-              <h2 className="text-2xl font-bold">No items in backlog</h2>
-              <p className="text-muted-foreground">
-                Use the AI assistant to generate words and add them to your backlog
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <Tabs defaultValue="ready" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="ready">
-              Ready ({readyItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="scheduled">
-              Scheduled ({futureItems.length})
-            </TabsTrigger>
-            <TabsTrigger value="all">All ({backlog.length})</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="ready" className="space-y-4 mt-6">
-            {readyItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No words ready yet. Check back later!
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {readyItems.map((item) => (
-                  <Card key={item.id} className="relative">
-                    <CardContent className="pt-6">
-                      <WordCard wordData={item.wordData} />
-                      <div className="flex gap-2 mt-4">
-                        <Button
-                          onClick={() => handleAddToActive(item)}
-                          size="sm"
-                          className="flex-1 gap-2"
-                        >
-                          <ArrowRight className="h-4 w-4" />
-                          Add to Active
-                        </Button>
-                        <Button
-                          onClick={() => removeFromBacklog(item.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="scheduled" className="space-y-4 mt-6">
-            {futureItems.length === 0 ? (
-              <Card>
-                <CardContent className="py-8 text-center text-muted-foreground">
-                  No scheduled words
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {futureItems.map((item) => (
-                  <Card key={item.id}>
-                    <CardContent className="pt-6">
-                      <WordCard wordData={item.wordData} />
-                      <div className="mt-4 space-y-2">
-                        <p className="text-xs text-muted-foreground">
-                          Scheduled: {formatDate(item.scheduledFor)}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleUpdateSchedule(item.id, 0)}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                          >
-                            Make Ready
-                          </Button>
-                          <Button
-                            onClick={() => removeFromBacklog(item.id)}
-                            variant="outline"
-                            size="sm"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="all" className="space-y-4 mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredBacklog.map((item) => (
-                <Card key={item.id}>
-                  <CardContent className="pt-6">
-                    <WordCard wordData={item.wordData} />
-                    <div className="mt-4 space-y-2">
-                      <p className="text-xs text-muted-foreground">
-                        {item.scheduledFor <= Date.now()
-                          ? 'Ready now'
-                          : `Scheduled: ${formatDate(item.scheduledFor)}`}
-                      </p>
-                      <div className="flex gap-2">
-                        {item.scheduledFor <= Date.now() ? (
-                          <Button
-                            onClick={() => handleAddToActive(item)}
-                            size="sm"
-                            className="flex-1 gap-2"
-                          >
-                            <ArrowRight className="h-4 w-4" />
-                            Add to Active
-                          </Button>
-                        ) : (
-                          <Button
-                            onClick={() => handleUpdateSchedule(item.id, 0)}
-                            variant="outline"
-                            size="sm"
-                            className="flex-1"
-                          >
-                            Make Ready
-                          </Button>
-                        )}
-                        <Button
-                          onClick={() => removeFromBacklog(item.id)}
-                          variant="outline"
-                          size="sm"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
     </div>
   );
 }
