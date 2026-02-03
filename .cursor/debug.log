@@ -1,0 +1,14 @@
+{"location":"middleware.ts:4","message":"Middleware START","data":{"pathname":"/","method":"GET"},"timestamp":1770150881664,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:37","message":"Auth check","data":{"hasUser":false,"pathname":"/"},"timestamp":1770150881665,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:54","message":"Middleware END","data":{"action":"next"},"timestamp":1770150881665,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"page.tsx:5","message":"HomePage component rendered","data":{"action":"redirect_to_login"},"timestamp":1770150881678,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"middleware.ts:4","message":"Middleware START","data":{"pathname":"/login","method":"GET"},"timestamp":1770150883722,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:37","message":"Auth check","data":{"hasUser":false,"pathname":"/login"},"timestamp":1770150883724,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:54","message":"Middleware END","data":{"action":"next"},"timestamp":1770150883724,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"login/page.tsx:9","message":"LoginPage component rendered","data":{"mounted":true},"timestamp":1770150884015,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"supabase/client.ts:4","message":"Creating Supabase client","data":{"hasUrl":true,"hasKey":true},"timestamp":1770150884015,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
+{"location":"middleware.ts:4","message":"Middleware START","data":{"pathname":"/login","method":"GET"},"timestamp":1770150892399,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:37","message":"Auth check","data":{"hasUser":false,"pathname":"/login"},"timestamp":1770150892401,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"middleware.ts:54","message":"Middleware END","data":{"action":"next"},"timestamp":1770150892401,"sessionId":"debug-session","runId":"run1","hypothesisId":"C"}
+{"location":"login/page.tsx:9","message":"LoginPage component rendered","data":{"mounted":true},"timestamp":1770150892416,"sessionId":"debug-session","runId":"run1","hypothesisId":"B"}
+{"location":"supabase/client.ts:4","message":"Creating Supabase client","data":{"hasUrl":true,"hasKey":true},"timestamp":1770150892416,"sessionId":"debug-session","runId":"run1","hypothesisId":"D"}
