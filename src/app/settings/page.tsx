@@ -4,10 +4,20 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Settings } from '@/types';
+import { getOrDevUser } from '@/lib/dev-auth';
+
+// Default settings when none exist in database
+const DEFAULT_SETTINGS: Settings = {
+  user_id: 'default',
+  intervals: { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 },
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [stats, setStats] = useState({ totalCards: 0, totalReviews: 0 });
+  const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
@@ -16,10 +26,12 @@ export default function SettingsPage() {
   }, []);
 
   const loadSettings = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    const user = await getOrDevUser(supabase);
+    if (!user) {
+      setSettings(DEFAULT_SETTINGS);
+      setLoading(false);
+      return;
+    }
 
     const { data } = await supabase
       .from('settings')
@@ -27,13 +39,13 @@ export default function SettingsPage() {
       .eq('user_id', user.id)
       .single();
 
-    setSettings(data);
+    // Use default settings if none found
+    setSettings(data || DEFAULT_SETTINGS);
+    setLoading(false);
   };
 
   const loadStats = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const { count: cardsCount } = await supabase
@@ -52,7 +64,7 @@ export default function SettingsPage() {
     });
   };
 
-  if (!settings) {
+  if (loading || !settings) {
     return (
       <div>
         <Nav />

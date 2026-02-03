@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card } from '@/types';
 import { isDueToday, getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
+import { getOrDevUser } from '@/lib/dev-auth';
 
 export default function TodayPage() {
   const [cards, setCards] = useState<Card[]>([]);
@@ -19,9 +20,7 @@ export default function TodayPage() {
 
   const loadDueCards = async () => {
     setLoading(true);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const today = formatDate(new Date());
@@ -45,9 +44,7 @@ export default function TodayPage() {
     const card = cards[currentIndex];
     if (!card) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const newBox = getNextBox(card.box, result);

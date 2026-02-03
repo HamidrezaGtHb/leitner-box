@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { DEV_MODE } from '@/lib/dev-auth';
 
 export function Nav() {
   const pathname = usePathname();
@@ -11,6 +12,11 @@ export function Nav() {
   const supabase = createClient();
 
   const handleSignOut = async () => {
+    if (DEV_MODE) {
+      // In dev mode, just redirect to login (auth is bypassed anyway)
+      router.push('/login');
+      return;
+    }
     await supabase.auth.signOut();
     router.push('/login');
   };

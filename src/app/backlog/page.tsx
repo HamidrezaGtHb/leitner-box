@@ -6,6 +6,7 @@ import { Nav } from '@/components/nav';
 import { BacklogItem } from '@/types';
 import { normalizeTerm } from '@/lib/utils';
 import { generateCardBack } from '@/lib/gemini';
+import { getOrDevUser } from '@/lib/dev-auth';
 
 export default function BacklogPage() {
   const [backlog, setBacklog] = useState<BacklogItem[]>([]);
@@ -19,9 +20,7 @@ export default function BacklogPage() {
   }, []);
 
   const loadBacklog = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const { data } = await supabase
@@ -38,9 +37,7 @@ export default function BacklogPage() {
     e.preventDefault();
     if (!newTerm.trim()) return;
 
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const normalized = normalizeTerm(newTerm);
@@ -80,9 +77,7 @@ export default function BacklogPage() {
     setConverting(item.id);
 
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      const user = await getOrDevUser(supabase);
       if (!user) return;
 
       let cardBack;

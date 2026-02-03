@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card } from '@/types';
+import { getOrDevUser } from '@/lib/dev-auth';
 
 export default function CardsPage() {
   const [cards, setCards] = useState<Card[]>([]);
@@ -17,9 +18,7 @@ export default function CardsPage() {
   }, []);
 
   const loadCards = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const user = await getOrDevUser(supabase);
     if (!user) return;
 
     const { data } = await supabase

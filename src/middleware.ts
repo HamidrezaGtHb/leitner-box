@@ -1,7 +1,13 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
+import { DEV_MODE } from '@/lib/dev-auth';
 
 export async function middleware(request: NextRequest) {
+  // Skip auth check in dev mode
+  if (DEV_MODE) {
+    return NextResponse.next();
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
