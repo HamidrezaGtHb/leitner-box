@@ -1,149 +1,134 @@
-# Setup Guide
+# Setup Instructions
 
-## Quick Start
+## Quick Start (با 2 Demo Users)
 
-1. **Install Dependencies**
-```bash
-npm install
+### 1. Supabase Setup
+
+1. برو به [supabase.com](https://supabase.com) و یک project بساز
+2. برو به **SQL Editor** و migrations را به ترتیب اجرا کن:
+   - `supabase/migrations/20260130000001_initial_schema.sql`
+   - `supabase/migrations/20260130000002_create_demo_users.sql`
+
+3. برو به **Settings → API** و این موارد را کپی کن:
+   - Project URL
+   - Anon public key
+
+4. این را در `.env.local` قرار بده:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+GEMINI_API_KEY=your-gemini-key
 ```
 
-2. **Run Development Server**
+### 2. Disable Email Confirmation (مهم!)
+
+1. برو به **Authentication → Settings**
+2. **"Enable email confirmations"** را **OFF** کن
+3. Save کن
+
+### 3. Demo Users (Already Created!)
+
+بعد از اجرای migrations، این 2 user آماده‌اند:
+
+**User 1:**
+- Email: `user1@example.com`
+- Password: `password123`
+
+**User 2:**
+- Email: `user2@example.com`
+- Password: `password123`
+
+### 4. Run App
+
 ```bash
 npm run dev
 ```
 
-3. **Open Your Browser**
-Navigate to [http://localhost:3000](http://localhost:3000)
+برو به `http://localhost:3000` و با یکی از users بالا login کن!
 
-## Initial Configuration
+---
 
-### Step 1: Configure API Key
+## اگر می‌خواهی user جدید اضافه کنی:
 
-1. Click on **Settings** in the navigation
-2. Go to the **API Key** tab
-3. Choose your AI provider:
-   - **OpenAI** (Recommended): Get API key from [platform.openai.com](https://platform.openai.com)
-   - **Gemini**: Get API key from [ai.google.dev](https://ai.google.dev)
-4. Paste your API key and click **Save**
+### روش 1: از SQL Editor
+```sql
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  created_at,
+  updated_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  is_super_admin,
+  role,
+  aud
+)
+VALUES (
+  gen_random_uuid(),
+  '00000000-0000-0000-0000-000000000000',
+  'YOUR_EMAIL@example.com',
+  crypt('YOUR_PASSWORD', gen_salt('bf')),
+  now(),
+  now(),
+  now(),
+  '{"provider":"email","providers":["email"]}',
+  '{}',
+  false,
+  'authenticated',
+  'authenticated'
+);
 
-### Step 2: Set Daily Goals
+-- Get the user ID
+SELECT id, email FROM auth.users WHERE email = 'YOUR_EMAIL@example.com';
 
-1. In Settings, go to the **Learning** tab
-2. Choose your daily new words limit: 5, 10, or 15
-3. This will be saved automatically
+-- Insert identity (use the user ID from above)
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  last_sign_in_at,
+  created_at,
+  updated_at
+)
+VALUES (
+  'USER_ID_FROM_ABOVE',
+  'USER_ID_FROM_ABOVE',
+  '{"sub":"USER_ID_FROM_ABOVE","email":"YOUR_EMAIL@example.com"}',
+  'email',
+  now(),
+  now(),
+  now()
+);
+```
 
-### Step 3: Add Your First Word
+### روش 2: Disable Email Confirmation و از UI sign up کن
 
-1. Return to **Home** page
-2. Type a German word in the input field (e.g., "Haus", "lernen", "schön")
-3. Press Enter or click the + button
-4. The AI will automatically fetch:
-   - Persian meaning
-   - Gender and plural (for nouns)
-   - Conjugations (for verbs)
-   - Example sentences
-
-## Features Overview
-
-### Home Page
-- Add new German words with AI enrichment
-- View recent words added
-- See quick stats (due today, new words progress, total cards)
-- Get notified when cards are due for review
-
-### Review Page
-- Interactive flashcard interface
-- Click to flip between German and Persian
-- Audio pronunciation using browser's speech synthesis
-- Track session statistics (correct/incorrect)
-- Automatic progression through due cards
-
-### Dashboard
-- View total words learned
-- See cards due today
-- Track daily activity with charts
-- View box distribution (Leitner system)
-- Monitor mastery level
-
-### Settings
-- Configure AI provider and API key
-- Set daily new words limit
-- Toggle between light/dark/system theme
-- View gender color coding reference
-
-## Gender Color Coding
-
-German nouns are color-coded by article:
-- **der** (masculine) → Blue
-- **die** (feminine) → Red
-- **das** (neuter) → Green
-
-## Leitner System Explained
-
-Cards move through 5 boxes based on your performance:
-
-| Box | Interval | Description |
-|-----|----------|-------------|
-| 1   | Daily    | New or incorrect cards |
-| 2   | 2 days   | First successful review |
-| 3   | 4 days   | Second successful review |
-| 4   | 7 days   | Third successful review |
-| 5   | 14 days  | Mastered cards |
-
-- **Correct answer**: Card moves to next box
-- **Incorrect answer**: Card returns to Box 1
-
-## Tips for Learning
-
-1. **Be Consistent**: Review your due cards daily
-2. **Don't Rush**: Focus on quality over quantity
-3. **Use Examples**: Read the example sentences to understand context
-4. **Practice Pronunciation**: Click the speaker icon to hear proper pronunciation
-5. **Adjust Goals**: Start with 5 words/day and increase as comfortable
+---
 
 ## Troubleshooting
 
-### API Key Not Working
-- Verify the key is correct and has sufficient credits
-- Check that you selected the correct provider (OpenAI vs Gemini)
-- Look for error messages when adding words
+### Email Confirmation Issue
+اگر sign up کردی اما email نیومد:
+1. برو **Authentication → Settings**
+2. **"Enable email confirmations"** را OFF کن
+3. User را از **Authentication → Users** حذف کن
+4. دوباره sign up کن
 
-### Cards Not Saving
-- Check browser console for errors
-- Ensure localStorage is enabled in your browser
-- Try clearing browser cache if issues persist
+### Can't Login
+- مطمئن شو که email confirmation OFF است
+- چک کن که `.env.local` درست باشد
+- در **Authentication → Users** ببین که user وجود دارد
 
-### Persian Text Not Displaying
-- The app uses Vazirmatn font loaded from Google Fonts
-- Ensure you have an internet connection on first load
+---
 
-## Data Storage
+## Production Deployment
 
-All your data is stored locally in your browser:
-- **Cards**: Your flashcards and progress
-- **Settings**: Your preferences
-- **Stats**: Daily statistics for charts
-
-**Important**: Clearing browser data will delete all your cards. To backup, you can export localStorage data from browser DevTools.
-
-## Building for Production
-
-```bash
-npm run build
-npm start
-```
-
-The production build will be optimized and ready for deployment.
-
-## Technology Stack
-
-- Next.js 16 (App Router)
-- React 19
-- TypeScript
-- Tailwind CSS v3
-- Shadcn/UI components
-- Radix UI primitives
-- Lucide React icons
-- next-themes for dark mode
-
-Enjoy learning German! 🇩🇪
+وقتی deploy می‌کنی:
+1. Demo users را حذف کن (برای امنیت)
+2. Email confirmation را ON کن
+3. Email templates را customize کن
+4. SMTP provider اضافه کن (اگر می‌خواهی custom emails داشته باشی)

@@ -2,6 +2,20 @@
 
 Minimal Leitner flashcard system for learning German vocabulary.
 
+## 🚀 Quick Start
+
+برای راه‌اندازی سریع با 2 demo user، [SETUP.md](./SETUP.md) را بخوان.
+
+**TL;DR:**
+```bash
+# 1. Run migrations in Supabase SQL Editor
+# 2. Disable email confirmation in Auth settings
+# 3. Update .env.local with your keys
+# 4. Login with: user1@example.com / password123
+```
+
+---
+
 ## Features
 
 - **Leitner System**: 5-box spaced repetition
@@ -21,69 +35,39 @@ Minimal Leitner flashcard system for learning German vocabulary.
 - Supabase (Auth + Postgres)
 - Google Gemini AI
 
-## Local Setup
+## Demo Users
 
-1. **Clone and install**:
-```bash
-git clone <repo>
-cd leitner-box
-npm install
-```
+After running migrations, you can login with:
 
-2. **Set up Supabase**:
-   - Create a project at https://supabase.com
-   - Go to Settings > API and copy:
-     - Project URL
-     - Anon public key
-   - Go to SQL Editor and run the migration:
-     ```
-     supabase/migrations/20260130000001_initial_schema.sql
-     ```
+- **User 1**: `user1@example.com` / `password123`
+- **User 2**: `user2@example.com` / `password123`
 
-3. **Get Gemini API key**:
-   - Go to https://ai.google.dev/
-   - Create an API key
+## Pages
 
-4. **Environment variables**:
-   - Copy `.env.example` to `.env.local`
-   - Fill in your keys:
-   ```
-   NEXT_PUBLIC_SUPABASE_URL=your-project-url
-   NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-   GEMINI_API_KEY=your-gemini-key
-   ```
+### `/login`
+- Email/password authentication
+- Sign up (requires email confirmation unless disabled)
 
-5. **Run dev server**:
-```bash
-npm run dev
-```
-
-6. **Open http://localhost:3000**
-
-7. **Sign up** with email/password
-
-## Usage
-
-### Today Page
+### `/today`
 - Shows cards due today
 - Tap "Show answer" to reveal card back
 - Answer "Correct" or "Wrong"
 - Correct moves card up one box
 - Wrong sends card back to Box 1
 
-### Backlog Page
+### `/backlog`
 - Add German terms (e.g., "der Bahnhof")
 - Click "AI Complete" to generate full card back via Gemini
 - Or click "Manual" to create basic card
 - Term converted to Card (starts in Box 1, due today)
 
-### Cards Page
+### `/cards`
 - Browse all cards
 - Filter by box (1-5)
 - Search by term
 - Delete cards
 
-### Settings Page
+### `/settings`
 - View box intervals (read-only for MVP)
 - See statistics
 
@@ -131,6 +115,19 @@ All tables have Row Level Security enabled. Users can only access their own data
 }
 ```
 
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+```
+
 ## Deployment
 
 ### Vercel
@@ -138,6 +135,29 @@ All tables have Row Level Security enabled. Users can only access their own data
 2. Import to Vercel
 3. Add environment variables
 4. Deploy
+
+### Environment Variables
+```
+NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+GEMINI_API_KEY=your-gemini-api-key
+```
+
+## Common Issues
+
+### Sign up email not received
+**Solution**: Disable email confirmation in Supabase:
+1. Go to **Authentication → Settings**
+2. Turn OFF **"Enable email confirmations"**
+3. Save
+
+### Can't login with demo users
+**Solution**: Make sure you ran the `20260130000002_create_demo_users.sql` migration
+
+### 404 errors
+**Solution**: Check that `.env.local` has valid Supabase credentials
+
+---
 
 ## License
 
