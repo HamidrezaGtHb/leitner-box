@@ -4,14 +4,16 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card } from '@/types';
-import { isDueToday, getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
-import { getOrDevUser } from '@/lib/dev-auth';
+import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
+import { Celebration } from '@/components/celebration';
+import toast from 'react-hot-toast';
 
 export default function TodayPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [celebrate, setCelebrate] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -20,7 +22,9 @@ export default function TodayPage() {
 
   const loadDueCards = async () => {
     setLoading(true);
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const today = formatDate(new Date());
@@ -34,6 +38,7 @@ export default function TodayPage() {
 
     if (error) {
       console.error('Error loading due cards:', error);
+      toast.error('خطا در بارگذاری کارت‌ها');
     } else {
       setCards(data || []);
     }
@@ -44,7 +49,9 @@ export default function TodayPage() {
     const card = cards[currentIndex];
     if (!card) return;
 
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const newBox = getNextBox(card.box, result);
@@ -62,6 +69,7 @@ export default function TodayPage() {
 
     if (updateError) {
       console.error('Error updating card:', updateError);
+      toast.error('خطا در به‌روزرسانی کارت');
       return;
     }
 
@@ -74,14 +82,23 @@ export default function TodayPage() {
       to_box: newBox,
     });
 
+    // Show feedback
+    if (result === 'correct') {
+      toast.success(`عالی! به باکس ${newBox} منتقل شد`);
+    } else {
+      toast.error('برگشت به باکس 1');
+    }
+
     // Move to next card
     setShowAnswer(false);
     if (currentIndex < cards.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // All done
+      // All done - trigger celebration
       setCards([]);
       setCurrentIndex(0);
+      setCelebrate(true);
+      toast.success('🎉 تمام مرورهای امروز تکمیل شد!', { duration: 4000 });
     }
   };
 
@@ -90,7 +107,7 @@ export default function TodayPage() {
       <div>
         <Nav />
         <div className="max-w-4xl mx-auto p-4 text-center mt-20">
-          Loading...
+          در حال بارگذاری...
         </div>
       </div>
     );
@@ -120,6 +137,7 @@ export default function TodayPage() {
   return (
     <div>
       <Nav />
+      <Celebration trigger={celebrate} />
       <div className="max-w-2xl mx-auto p-4">
         <div className="mb-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
@@ -129,7 +147,7 @@ export default function TodayPage() {
         </div>
 
         {/* Progress bar */}
-        <div className="mb-6 h-1 bg-gray-200 rounded-full overflow-hidden">
+        <div className="mb-6 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
             className="h-full bg-blue-600 transition-all"
             style={{
@@ -139,13 +157,13 @@ export default function TodayPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white border rounded-lg p-8 min-h-[300px] flex flex-col items-center justify-center">
+        <div className="bg-white border rounded-lg p-8 min-h-[400px] flex flex-col items-center justify-center shadow-lg">
           {!showAnswer ? (
-            <div className="text-center space-y-6">
+            <div className="text-center space-y-6 w-full">
               <div className="text-4xl font-bold">{currentCard.term}</div>
               <button
                 onClick={() => setShowAnswer(true)}
-                className="px-6 py-3 bg-blue-600 text-white rounded hover:bg-blue-700"
+                className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium min-w-[200px]"
               >
                 Show answer
               </button>
@@ -208,13 +226,13 @@ export default function TodayPage() {
               <div className="flex gap-3 mt-8">
                 <button
                   onClick={() => handleAnswer('wrong')}
-                  className="flex-1 py-3 bg-red-600 text-white rounded hover:bg-red-700"
+                  className="flex-1 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-lg"
                 >
                   Wrong
                 </button>
                 <button
                   onClick={() => handleAnswer('correct')}
-                  className="flex-1 py-3 bg-green-600 text-white rounded hover:bg-green-700"
+                  className="flex-1 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-lg"
                 >
                   Correct
                 </button>

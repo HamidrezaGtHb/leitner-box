@@ -5,14 +5,20 @@ import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { BacklogItem } from '@/types';
 import { normalizeTerm } from '@/lib/utils';
-import { generateCardBack } from '@/lib/gemini';
-import { getOrDevUser } from '@/lib/dev-auth';
+import { completeBacklogToCardAction } from '@/app/actions/ai-actions';
+import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
+import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
+import { CSVImportDialog } from '@/components/csv-import-dialog';
+import toast from 'react-hot-toast';
 
 export default function BacklogPage() {
   const [backlog, setBacklog] = useState<BacklogItem[]>([]);
   const [newTerm, setNewTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [converting, setConverting] = useState<string | null>(null);
+  const [showBatchDialog, setShowBatchDialog] = useState(false);
+  const [showOCRDialog, setShowOCRDialog] = useState(false);
+  const [showCSVDialog, setShowCSVDialog] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -20,7 +26,9 @@ export default function BacklogPage() {
   }, []);
 
   const loadBacklog = async () => {
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data } = await supabase
@@ -37,8 +45,13 @@ export default function BacklogPage() {
     e.preventDefault();
     if (!newTerm.trim()) return;
 
-    const user = await getOrDevUser(supabase);
-    if (!user) return;
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error('لطفاً وارد شوید');
+      return;
+    }
 
     const normalized = normalizeTerm(newTerm);
 
@@ -51,7 +64,7 @@ export default function BacklogPage() {
       .single();
 
     if (existingCard) {
-      alert('This term already exists in your cards!');
+      toast.error('این کلمه قبلاً در کارت‌ها وجود دارد');
       return;
     }
 
@@ -63,11 +76,13 @@ export default function BacklogPage() {
 
     if (error) {
       if (error.code === '23505') {
-        alert('This term already exists in your backlog!');
+        toast.error('این کلمه قبلاً در Backlog وجود دارد');
       } else {
+        toast.error('خطا در افزودن کلمه');
         console.error('Error adding to backlog:', error);
       }
     } else {
+      toast.success('کلمه به Backlog اضافه شد');
       setNewTerm('');
       loadBacklog();
     }
@@ -76,62 +91,25 @@ export default function BacklogPage() {
   const handleConvertToCard = async (item: BacklogItem, useAI: boolean) => {
     setConverting(item.id);
 
+    const loadingToast = toast.loading(
+      useAI ? 'در حال تولید محتوا با AI...' : 'در حال ایجاد کارت...'
+    );
+
     try {
-      const user = await getOrDevUser(supabase);
-      if (!user) return;
+      const result = await completeBacklogToCardAction(
+        item.id,
+        useAI ? 'ai' : 'manual'
+      );
 
-      let cardBack;
-
-      if (useAI) {
-        // Generate with AI
-        cardBack = await generateCardBack({
-          term: item.term,
-          level: item.level || undefined,
-          pos: item.pos || undefined,
-        });
-      } else {
-        // Manual: create minimal back
-        cardBack = {
-          term: item.term,
-          language: 'de' as const,
-          level: item.level || 'B1',
-          pos: (item.pos || 'other') as any,
-          ipa: null,
-          meaning_fa: ['معنی را اضافه کنید'],
-          meaning_en: ['Add meaning'],
-          examples: [],
-          synonyms: [],
-          antonyms: [],
-          collocations: [],
-          register_note: null,
-          grammar: {},
-          learning_tips: [],
-        };
-      }
-
-      // Insert card
-      const { error } = await supabase.from('cards').insert({
-        user_id: user.id,
-        term: item.term,
-        term_normalized: item.term_normalized,
-        level: item.level,
-        pos: item.pos,
-        box: 1,
-        due_date: new Date().toISOString().split('T')[0], // Due today
-        back_json: cardBack,
-      });
-
-      if (error) {
-        console.error('Error creating card:', error);
-        alert('Error creating card');
-      } else {
-        // Remove from backlog
-        await supabase.from('backlog').delete().eq('id', item.id);
+      if (result.success) {
+        toast.success('کارت با موفقیت ایجاد شد', { id: loadingToast });
         loadBacklog();
+      } else {
+        toast.error(result.error, { id: loadingToast });
       }
     } catch (error) {
       console.error('Error:', error);
-      alert('Error converting to card');
+      toast.error('خطا در ایجاد کارت', { id: loadingToast });
     } finally {
       setConverting(null);
     }
@@ -139,6 +117,7 @@ export default function BacklogPage() {
 
   const handleDelete = async (id: string) => {
     await supabase.from('backlog').delete().eq('id', id);
+    toast.success('کلمه حذف شد');
     loadBacklog();
   };
 
@@ -146,7 +125,7 @@ export default function BacklogPage() {
     return (
       <div>
         <Nav />
-        <div className="max-w-4xl mx-auto p-4">Loading...</div>
+        <div className="max-w-4xl mx-auto p-4">در حال بارگذاری...</div>
       </div>
     );
   }
@@ -155,7 +134,29 @@ export default function BacklogPage() {
     <div>
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-        <h1 className="text-2xl font-bold">Backlog</h1>
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h1 className="text-2xl font-bold">Backlog</h1>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => setShowBatchDialog(true)}
+              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm whitespace-nowrap"
+            >
+              ✨ Batch Generate
+            </button>
+            <button
+              onClick={() => setShowOCRDialog(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm whitespace-nowrap"
+            >
+              📸 OCR Import
+            </button>
+            <button
+              onClick={() => setShowCSVDialog(true)}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm whitespace-nowrap"
+            >
+              📄 CSV Import
+            </button>
+          </div>
+        </div>
 
         {/* Add form */}
         <form onSubmit={handleAddToBacklog} className="flex gap-2">
@@ -164,11 +165,11 @@ export default function BacklogPage() {
             value={newTerm}
             onChange={(e) => setNewTerm(e.target.value)}
             placeholder="Add a German term (e.g., der Bahnhof)"
-            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
           />
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium min-w-[80px]"
           >
             Add
           </button>
@@ -184,32 +185,32 @@ export default function BacklogPage() {
             {backlog.map((item) => (
               <div
                 key={item.id}
-                className="bg-white border rounded-lg p-4 flex items-center justify-between"
+                className="bg-white border rounded-lg p-4 flex items-center justify-between gap-3"
               >
-                <div>
-                  <div className="font-semibold">{item.term}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-lg truncate">{item.term}</div>
                   <div className="text-sm text-gray-500">
                     {new Date(item.created_at).toLocaleDateString()}
                   </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap justify-end">
                   <button
                     onClick={() => handleConvertToCard(item, true)}
                     disabled={converting === item.id}
-                    className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 min-w-[90px]"
                   >
-                    {converting === item.id ? 'Converting...' : 'AI Complete'}
+                    {converting === item.id ? '...' : 'AI Complete'}
                   </button>
                   <button
                     onClick={() => handleConvertToCard(item, false)}
                     disabled={converting === item.id}
-                    className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[80px]"
                   >
                     Manual
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 min-w-[70px]"
                   >
                     Delete
                   </button>
@@ -218,6 +219,27 @@ export default function BacklogPage() {
             ))}
           </div>
         )}
+
+        {/* Batch Generate Dialog */}
+        <BatchGenerateDialog
+          open={showBatchDialog}
+          onOpenChange={setShowBatchDialog}
+          onSuccess={loadBacklog}
+        />
+
+        {/* OCR Upload Dialog */}
+        <OCRUploadDialog
+          open={showOCRDialog}
+          onOpenChange={setShowOCRDialog}
+          onSuccess={loadBacklog}
+        />
+
+        {/* CSV Import Dialog */}
+        <CSVImportDialog
+          open={showCSVDialog}
+          onOpenChange={setShowCSVDialog}
+          onSuccess={loadBacklog}
+        />
       </div>
     </div>
   );

@@ -4,13 +4,15 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card } from '@/types';
-import { getOrDevUser } from '@/lib/dev-auth';
+import { EditCardDialog } from '@/components/edit-card-dialog';
+import toast from 'react-hot-toast';
 
 export default function CardsPage() {
   const [cards, setCards] = useState<Card[]>([]);
   const [filterBox, setFilterBox] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [editingCard, setEditingCard] = useState<Card | null>(null);
   const supabase = createClient();
 
   useEffect(() => {
@@ -18,7 +20,9 @@ export default function CardsPage() {
   }, []);
 
   const loadCards = async () => {
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
     const { data } = await supabase
@@ -32,10 +36,18 @@ export default function CardsPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this card?')) return;
+    if (!confirm('حذف این کارت؟')) return;
 
-    await supabase.from('cards').delete().eq('id', id);
-    loadCards();
+    const deleteToast = toast.loading('در حال حذف...');
+    
+    const { error } = await supabase.from('cards').delete().eq('id', id);
+    
+    if (error) {
+      toast.error('خطا در حذف کارت', { id: deleteToast });
+    } else {
+      toast.success('کارت حذف شد', { id: deleteToast });
+      loadCards();
+    }
   };
 
   const filteredCards = cards.filter((card) => {
@@ -49,7 +61,7 @@ export default function CardsPage() {
     return (
       <div>
         <Nav />
-        <div className="max-w-6xl mx-auto p-4">Loading...</div>
+        <div className="max-w-6xl mx-auto p-4">در حال بارگذاری...</div>
       </div>
     );
   }
@@ -67,12 +79,12 @@ export default function CardsPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search terms..."
-            className="flex-1 px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
           />
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0">
             <button
               onClick={() => setFilterBox('all')}
-              className={`px-3 py-2 rounded text-sm ${
+              className={`px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap min-w-[60px] ${
                 filterBox === 'all'
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-100 text-gray-700'
@@ -84,7 +96,7 @@ export default function CardsPage() {
               <button
                 key={box}
                 onClick={() => setFilterBox(box)}
-                className={`px-3 py-2 rounded text-sm ${
+                className={`px-4 py-3 rounded-lg text-sm font-medium whitespace-nowrap min-w-[70px] ${
                   filterBox === box
                     ? 'bg-blue-600 text-white'
                     : 'bg-gray-100 text-gray-700'
@@ -110,11 +122,11 @@ export default function CardsPage() {
             {filteredCards.map((card) => (
               <div
                 key={card.id}
-                className="bg-white border rounded-lg p-4 space-y-3"
+                className="bg-white border rounded-lg p-4 space-y-3 hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between">
-                  <div className="font-semibold text-lg">{card.term}</div>
-                  <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                  <div className="font-semibold text-lg flex-1 min-w-0 pr-2">{card.term}</div>
+                  <div className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded whitespace-nowrap">
                     Box {card.box}
                   </div>
                 </div>
@@ -137,15 +149,33 @@ export default function CardsPage() {
                   Due: {card.due_date}
                 </div>
 
-                <button
-                  onClick={() => handleDelete(card.id)}
-                  className="w-full py-1 text-sm bg-red-50 text-red-600 rounded hover:bg-red-100"
-                >
-                  Delete
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setEditingCard(card)}
+                    className="flex-1 py-2 text-sm bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 font-medium"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(card.id)}
+                    className="flex-1 py-2 text-sm bg-red-50 text-red-600 rounded-lg hover:bg-red-100 font-medium"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             ))}
           </div>
+        )}
+
+        {/* Edit Dialog */}
+        {editingCard && (
+          <EditCardDialog
+            card={editingCard}
+            open={!!editingCard}
+            onOpenChange={(open) => !open && setEditingCard(null)}
+            onSuccess={loadCards}
+          />
         )}
       </div>
     </div>

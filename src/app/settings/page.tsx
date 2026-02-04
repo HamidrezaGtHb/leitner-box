@@ -4,7 +4,12 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Settings } from '@/types';
-import { getOrDevUser } from '@/lib/dev-auth';
+import {
+  calculateStreak,
+  calculateAccuracy,
+  getNextDueTime,
+  getBoxDistribution,
+} from '@/lib/streak';
 
 // Default settings when none exist in database
 const DEFAULT_SETTINGS: Settings = {
@@ -16,7 +21,14 @@ const DEFAULT_SETTINGS: Settings = {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings | null>(null);
-  const [stats, setStats] = useState({ totalCards: 0, totalReviews: 0 });
+  const [stats, setStats] = useState({
+    totalCards: 0,
+    totalReviews: 0,
+    streak: 0,
+    accuracy: 0,
+    boxDistribution: {} as Record<number, number>,
+    nextDue: null as { dueDate: string; hoursUntil: number } | null,
+  });
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
 
@@ -26,7 +38,9 @@ export default function SettingsPage() {
   }, []);
 
   const loadSettings = async () => {
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) {
       setSettings(DEFAULT_SETTINGS);
       setLoading(false);
@@ -45,22 +59,42 @@ export default function SettingsPage() {
   };
 
   const loadStats = async () => {
-    const user = await getOrDevUser(supabase);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Total cards
     const { count: cardsCount } = await supabase
       .from('cards')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
+    // Total reviews
     const { count: reviewsCount } = await supabase
       .from('reviews')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', user.id);
 
+    // Streak
+    const streak = await calculateStreak(supabase, user.id);
+
+    // Accuracy
+    const accuracy = await calculateAccuracy(supabase, user.id);
+
+    // Box distribution
+    const boxDistribution = await getBoxDistribution(supabase, user.id);
+
+    // Next due
+    const nextDue = await getNextDueTime(supabase, user.id);
+
     setStats({
       totalCards: cardsCount || 0,
       totalReviews: reviewsCount || 0,
+      streak,
+      accuracy,
+      boxDistribution,
+      nextDue,
     });
   };
 
@@ -68,7 +102,7 @@ export default function SettingsPage() {
     return (
       <div>
         <Nav />
-        <div className="max-w-4xl mx-auto p-4">Loading...</div>
+        <div className="max-w-4xl mx-auto p-4">در حال بارگذاری...</div>
       </div>
     );
   }
@@ -80,6 +114,92 @@ export default function SettingsPage() {
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-8">
         <h1 className="text-2xl font-bold">Settings</h1>
+
+        {/* Statistics */}
+        <div className="bg-white border rounded-lg p-6 space-y-6">
+          <h2 className="text-lg font-semibold">Statistics</h2>
+
+          {/* Main stats grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <div className="text-3xl font-bold text-blue-600">
+                {stats.totalCards}
+              </div>
+              <div className="text-sm text-gray-600">Total Cards</div>
+            </div>
+            <div className="p-4 bg-green-50 rounded-lg">
+              <div className="text-3xl font-bold text-green-600">
+                {stats.totalReviews}
+              </div>
+              <div className="text-sm text-gray-600">Total Reviews</div>
+            </div>
+            <div className="p-4 bg-orange-50 rounded-lg">
+              <div className="text-3xl font-bold text-orange-600">
+                {stats.streak}
+              </div>
+              <div className="text-sm text-gray-600">Day Streak 🔥</div>
+            </div>
+            <div className="p-4 bg-purple-50 rounded-lg">
+              <div className="text-3xl font-bold text-purple-600">
+                {stats.accuracy}%
+              </div>
+              <div className="text-sm text-gray-600">Accuracy</div>
+            </div>
+          </div>
+
+          {/* Next review timer */}
+          {stats.nextDue && (
+            <div className="p-4 bg-indigo-50 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium text-gray-700">
+                    Next Review
+                  </div>
+                  <div className="text-2xl font-bold text-indigo-600">
+                    {stats.nextDue.hoursUntil < 24
+                      ? `in ${stats.nextDue.hoursUntil}h`
+                      : `on ${stats.nextDue.dueDate}`}
+                  </div>
+                </div>
+                <div className="text-4xl">⏰</div>
+              </div>
+            </div>
+          )}
+
+          {/* Box distribution chart */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">
+              Cards per Box
+            </h3>
+            <div className="space-y-2">
+              {[1, 2, 3, 4, 5].map((box) => {
+                const count = stats.boxDistribution[box] || 0;
+                const percentage =
+                  stats.totalCards > 0
+                    ? (count / stats.totalCards) * 100
+                    : 0;
+                return (
+                  <div key={box} className="flex items-center gap-3">
+                    <div className="w-16 text-sm font-medium text-gray-700">
+                      Box {box}
+                    </div>
+                    <div className="flex-1 h-8 bg-gray-100 rounded-lg overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-end px-2 text-white text-sm font-medium transition-all"
+                        style={{ width: `${Math.max(percentage, count > 0 ? 10 : 0)}%` }}
+                      >
+                        {count > 0 && count}
+                      </div>
+                    </div>
+                    <div className="w-12 text-sm text-gray-600">
+                      {count}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
 
         {/* Review Intervals */}
         <div className="bg-white border rounded-lg p-6 space-y-4">
@@ -100,25 +220,6 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-
-        {/* Statistics */}
-        <div className="bg-white border rounded-lg p-6 space-y-4">
-          <h2 className="text-lg font-semibold">Statistics</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-blue-50 rounded">
-              <div className="text-3xl font-bold text-blue-600">
-                {stats.totalCards}
-              </div>
-              <div className="text-sm text-gray-600">Total Cards</div>
-            </div>
-            <div className="p-4 bg-green-50 rounded">
-              <div className="text-3xl font-bold text-green-600">
-                {stats.totalReviews}
-              </div>
-              <div className="text-sm text-gray-600">Total Reviews</div>
-            </div>
           </div>
         </div>
 
