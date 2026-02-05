@@ -31,6 +31,7 @@ export default function CardsPage() {
   const [loading, setLoading] = useState(true);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalCards, setModalCards] = useState<CardType[]>([]);
   const [modalIndex, setModalIndex] = useState(0);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState({
@@ -110,12 +111,10 @@ export default function CardsPage() {
   const filteredCards = cards.filter((card) => card.box === filterBox);
   const visibleCards = filteredCards.filter(c => !isCardHidden(c));
 
-  const openCardModal = (card: CardType) => {
-    const visibleIndex = visibleCards.findIndex(c => c.id === card.id);
-    if (visibleIndex !== -1) {
-      setModalIndex(visibleIndex);
-      setModalOpen(true);
-    }
+  const openCardModal = (cardsArray: CardType[], index: number) => {
+    setModalCards(cardsArray);
+    setModalIndex(index);
+    setModalOpen(true);
   };
 
   const handleEditFromModal = (card: CardType) => {
@@ -265,7 +264,12 @@ export default function CardsPage() {
                   variant={cardVariant}
                   padding="md"
                   className={`cursor-pointer hover:shadow-lg transition-shadow ${hidden ? 'opacity-50' : ''}`}
-                  onClick={() => !hidden && openCardModal(card)}
+                  onClick={() => {
+                    if (!hidden) {
+                      const visibleIndex = visibleCards.findIndex(c => c.id === card.id);
+                      openCardModal(visibleCards, visibleIndex);
+                    }
+                  }}
                 >
                   <CardContent className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -306,7 +310,7 @@ export default function CardsPage() {
 
         {/* Card Detail Modal */}
         <CardDetailModal
-          cards={visibleCards}
+          cards={modalCards}
           currentIndex={modalIndex}
           open={modalOpen}
           onOpenChange={setModalOpen}
