@@ -4,19 +4,16 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { useLanguage } from '@/lib/i18n';
-import { useTheme } from '@/lib/theme';
-import { CalendarIcon, SunIcon, MoonIcon } from '@/components/ui';
+import { CalendarIcon } from '@/components/ui';
 
 export function Nav() {
   const pathname = usePathname();
   const { t } = useLanguage();
-  const { theme, toggleTheme } = useTheme();
 
-  const navItems = [
+  const mainNavItems = [
     { href: '/today', label: t.nav.today, icon: '📚' },
     { href: '/backlog', label: t.nav.backlog, icon: '📝' },
     { href: '/cards', label: t.nav.cards, icon: '🗂️' },
-    { href: '/settings', label: t.nav.settings, icon: '⚙️' },
   ];
 
   const isActive = (path: string) => pathname === path;
@@ -36,7 +33,7 @@ export function Nav() {
 
           {/* Desktop Nav */}
           <div className="hidden md:flex items-center gap-1">
-            {navItems.map((item) => (
+            {mainNavItems.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -52,20 +49,27 @@ export function Nav() {
               </Link>
             ))}
 
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="ml-2 p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === 'light' ? <MoonIcon size={20} /> : <SunIcon size={20} />}
-            </button>
+            {/* Settings Icon (separate) */}
+            <div className="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
+              <Link
+                href="/settings"
+                className={cn(
+                  'p-2 rounded-lg transition-all duration-200 flex items-center justify-center',
+                  isActive('/settings')
+                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                )}
+                aria-label={t.nav.settings}
+              >
+                <span className="text-lg">⚙️</span>
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Mobile Nav */}
         <div className="md:hidden flex items-center gap-1 pb-3 overflow-x-auto scrollbar-hide">
-          {navItems.map((item) => (
+          {mainNavItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
@@ -81,13 +85,21 @@ export function Nav() {
             </Link>
           ))}
 
-          {/* Mobile Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
-          >
-            {theme === 'light' ? <MoonIcon size={16} /> : <SunIcon size={16} />}
-          </button>
+          {/* Settings Icon (separate) */}
+          <div className="ml-auto pl-2 border-l border-gray-200 dark:border-gray-700">
+            <Link
+              href="/settings"
+              className={cn(
+                'flex items-center justify-center p-2 rounded-lg transition-all',
+                isActive('/settings')
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+              )}
+              aria-label={t.nav.settings}
+            >
+              <span className="text-lg">⚙️</span>
+            </Link>
+          </div>
         </div>
       </div>
     </nav>

@@ -176,6 +176,10 @@ export const translations = {
       account: 'Account',
       accountDesc: 'Manage your account',
       logoutConfirm: 'Are you sure you want to logout?',
+      appearance: 'Appearance',
+      appearanceDesc: 'Choose your preferred theme',
+      lightMode: 'Light',
+      darkMode: 'Dark',
     },
 
     // Errors
@@ -361,6 +365,10 @@ export const translations = {
       account: 'Konto',
       accountDesc: 'Verwalten Sie Ihr Konto',
       logoutConfirm: 'Sind Sie sicher, dass Sie sich abmelden möchten?',
+      appearance: 'Erscheinungsbild',
+      appearanceDesc: 'Wählen Sie Ihr bevorzugtes Theme',
+      lightMode: 'Hell',
+      darkMode: 'Dunkel',
     },
 
     // Errors

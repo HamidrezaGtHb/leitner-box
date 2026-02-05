@@ -14,6 +14,7 @@ import {
 } from '@/lib/streak';
 import { Button, Card, CardHeader, CardTitle, CardContent, Toggle, BoxBadge } from '@/components/ui';
 import { useLanguage, Language } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: Settings = {
@@ -40,6 +41,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     if (!confirm(t.settings.logoutConfirm)) return;
@@ -186,6 +188,34 @@ export default function SettingsPage() {
                 onClick={() => handleLanguageChange('de')}
               >
                 🇩🇪 {t.settings.german}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Appearance Card */}
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
+          <CardHeader>
+            <CardTitle className="dark:text-white">{t.settings.appearance}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t.settings.appearanceDesc}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={theme === 'light' ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => setTheme('light')}
+              >
+                ☀️ {t.settings.lightMode}
+              </Button>
+              <Button
+                variant={theme === 'dark' ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => setTheme('dark')}
+              >
+                🌙 {t.settings.darkMode}
               </Button>
             </div>
           </CardContent>
