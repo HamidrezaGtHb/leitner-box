@@ -6,7 +6,7 @@ import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
-import { Button, Card, CardContent, ArticleBadge, Badge } from '@/components/ui';
+import { Button, Card, CardContent, ArticleBadge, Badge, CopyButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
@@ -244,8 +244,11 @@ export default function TodayPage() {
               <CardContent className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
                 <div className="space-y-4">
                   {article && <ArticleBadge article={article} size="lg" />}
-                  <div className="text-4xl md:text-5xl font-bold text-text">
-                    {currentCard.term}
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="text-4xl md:text-5xl font-bold text-text">
+                      {currentCard.term}
+                    </div>
+                    <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
                   </div>
                   <div className="text-sm text-text-muted">
                     {t.common.box} {currentCard.box}
@@ -267,6 +270,7 @@ export default function TodayPage() {
                   <div className="flex items-center justify-center gap-2 mb-2">
                     {article && <ArticleBadge article={article} size="md" />}
                     <span className="text-2xl font-bold text-text">{currentCard.term}</span>
+                    <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
                   </div>
                 </div>
 
@@ -395,18 +399,24 @@ export default function TodayPage() {
                 return (
                   <Card key={card.id} variant={cardVariant} padding="none" className="overflow-hidden">
                     {/* Card header - clickable */}
-                    <button
-                      onClick={() => toggleCardExpand(card.id)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        {article && <ArticleBadge article={article} size="md" />}
-                        <span className="text-lg font-semibold text-text">{card.term}</span>
-                      </div>
-                      <span className="text-text-muted text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
-                        ▼
-                      </span>
-                    </button>
+                    <div className="flex items-center">
+                      <button
+                        onClick={() => toggleCardExpand(card.id)}
+                        className="flex-1 p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <div className="flex items-center gap-3">
+                          {article && <ArticleBadge article={article} size="md" />}
+                          <span className="text-lg font-semibold text-text">{card.term}</span>
+                        </div>
+                        <span className="text-text-muted text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
+                          ▼
+                        </span>
+                      </button>
+                      <CopyButton
+                        text={article ? `${article} ${card.term}` : card.term}
+                        className="mr-2"
+                      />
+                    </div>
 
                     {/* Expanded content */}
                     {isExpanded && (

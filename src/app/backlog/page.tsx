@@ -9,6 +9,7 @@ import { completeBacklogToCardAction } from '@/app/actions/ai-actions';
 import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
 import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
 import { CSVImportDialog } from '@/components/csv-import-dialog';
+import { ManualCardDialog } from '@/components/manual-card-dialog';
 import { Button, Card, CardContent, Input } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
@@ -21,6 +22,8 @@ export default function BacklogPage() {
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [showOCRDialog, setShowOCRDialog] = useState(false);
   const [showCSVDialog, setShowCSVDialog] = useState(false);
+  const [showManualDialog, setShowManualDialog] = useState(false);
+  const [manualItem, setManualItem] = useState<BacklogItem | null>(null);
   const supabase = createClient();
   const { t } = useLanguage();
 
@@ -91,18 +94,13 @@ export default function BacklogPage() {
     }
   };
 
-  const handleConvertToCard = async (item: BacklogItem, useAI: boolean) => {
+  const handleConvertToCard = async (item: BacklogItem) => {
     setConverting(item.id);
 
-    const loadingToast = toast.loading(
-      useAI ? t.backlog.generatingAI : t.backlog.creatingCard
-    );
+    const loadingToast = toast.loading(t.backlog.generatingAI);
 
     try {
-      const result = await completeBacklogToCardAction(
-        item.id,
-        useAI ? 'ai' : 'manual'
-      );
+      const result = await completeBacklogToCardAction(item.id, 'ai');
 
       if (result.success) {
         toast.success(t.backlog.cardCreated, { id: loadingToast });
@@ -118,6 +116,11 @@ export default function BacklogPage() {
     }
   };
 
+  const handleManualCard = (item: BacklogItem) => {
+    setManualItem(item);
+    setShowManualDialog(true);
+  };
+
   const handleDelete = async (id: string) => {
     await supabase.from('backlog').delete().eq('id', id);
     toast.success(t.backlog.wordDeleted);
@@ -126,19 +129,19 @@ export default function BacklogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-bg">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4 text-gray-600">{t.common.loading}</div>
+        <div className="max-w-4xl mx-auto p-4 text-text-muted">{t.common.loading}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-2xl font-bold text-gray-900">{t.backlog.title}</h1>
+          <h1 className="text-2xl font-semibold text-text">{t.backlog.title}</h1>
           <div className="flex gap-2 flex-wrap">
             <Button
               variant="primary"
@@ -190,7 +193,7 @@ export default function BacklogPage() {
           <Card padding="lg" className="text-center py-16">
             <CardContent>
               <div className="text-4xl mb-4">📝</div>
-              <p className="text-gray-600">
+              <p className="text-text-muted">
                 {t.backlog.emptyBacklog}
               </p>
             </CardContent>
@@ -199,37 +202,46 @@ export default function BacklogPage() {
           <div className="space-y-3">
             {backlog.map((item) => (
               <Card key={item.id} padding="md">
-                <CardContent className="flex items-center justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-lg text-gray-900 truncate">{item.term}</div>
-                    <div className="text-sm text-gray-500">
-                      {new Date(item.created_at).toLocaleDateString()}
+                <CardContent className="space-y-3">
+                  {/* Term and date */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-lg text-text break-words">{item.term}</div>
+                      <div className="text-sm text-text-muted">
+                        {new Date(item.created_at).toLocaleDateString()}
+                      </div>
                     </div>
+                    {/* Delete button - always visible */}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDelete(item.id)}
+                      className="text-text-muted hover:text-danger shrink-0"
+                    >
+                      ✕
+                    </Button>
                   </div>
-                  <div className="flex gap-2 flex-wrap justify-end">
+
+                  {/* Action buttons - stack on mobile */}
+                  <div className="flex gap-2">
                     <Button
                       variant="success"
                       size="sm"
-                      onClick={() => handleConvertToCard(item, true)}
+                      className="flex-1"
+                      onClick={() => handleConvertToCard(item)}
                       disabled={converting === item.id}
                       loading={converting === item.id}
                     >
-                      {t.backlog.aiComplete}
+                      ✨ {t.backlog.aiComplete}
                     </Button>
                     <Button
                       variant="secondary"
                       size="sm"
-                      onClick={() => handleConvertToCard(item, false)}
+                      className="flex-1"
+                      onClick={() => handleManualCard(item)}
                       disabled={converting === item.id}
                     >
-                      {t.backlog.manual}
-                    </Button>
-                    <Button
-                      variant="danger-soft"
-                      size="sm"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      {t.common.delete}
+                      ✏️ {t.backlog.manual}
                     </Button>
                   </div>
                 </CardContent>
@@ -256,6 +268,14 @@ export default function BacklogPage() {
         <CSVImportDialog
           open={showCSVDialog}
           onOpenChange={setShowCSVDialog}
+          onSuccess={loadBacklog}
+        />
+
+        {/* Manual Card Dialog */}
+        <ManualCardDialog
+          item={manualItem}
+          open={showManualDialog}
+          onOpenChange={setShowManualDialog}
           onSuccess={loadBacklog}
         />
       </div>
