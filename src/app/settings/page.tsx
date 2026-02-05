@@ -10,11 +10,14 @@ import {
   getNextDueTime,
   getBoxDistribution,
 } from '@/lib/streak';
+import toast from 'react-hot-toast';
 
 // Default settings when none exist in database
 const DEFAULT_SETTINGS: Settings = {
   user_id: 'default',
   intervals: { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 },
+  daily_limit: 10, // Default: 10 cards per day
+  hide_future_cards: true, // Default: hide Box 2+ until due
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -30,6 +33,7 @@ export default function SettingsPage() {
     nextDue: null as { dueDate: string; hoursUntil: number } | null,
   });
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const supabase = createClient();
 
   useEffect(() => {
@@ -96,6 +100,39 @@ export default function SettingsPage() {
       boxDistribution,
       nextDue,
     });
+  };
+
+  const saveSettings = async (newSettings: Partial<Settings>) => {
+    setSaving(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      toast.error('لطفاً وارد شوید');
+      setSaving(false);
+      return;
+    }
+
+    const updatedSettings = {
+      ...settings,
+      ...newSettings,
+      user_id: user.id,
+      updated_at: new Date().toISOString(),
+    };
+
+    const { error } = await supabase
+      .from('settings')
+      .upsert(updatedSettings, { onConflict: 'user_id' });
+
+    if (error) {
+      toast.error('خطا در ذخیره تنظیمات');
+      console.error('Error saving settings:', error);
+    } else {
+      setSettings(updatedSettings as Settings);
+      toast.success('تنظیمات ذخیره شد');
+    }
+    setSaving(false);
   };
 
   if (loading || !settings) {
@@ -197,6 +234,64 @@ export default function SettingsPage() {
                   </div>
                 );
               })}
+            </div>
+          </div>
+        </div>
+
+        {/* Learning Settings */}
+        <div className="bg-white border rounded-lg p-6 space-y-6">
+          <h2 className="text-lg font-semibold">تنظیمات یادگیری</h2>
+
+          {/* Daily Limit */}
+          <div className="space-y-3">
+            <label className="block text-sm font-medium text-gray-700">
+              محدودیت مرور روزانه
+            </label>
+            <p className="text-sm text-gray-500">
+              حداکثر تعداد کارت‌هایی که روزانه برای مرور نمایش داده می‌شود
+            </p>
+            <div className="flex gap-3">
+              {[5, 10, 15, 20].map((limit) => (
+                <button
+                  key={limit}
+                  onClick={() => saveSettings({ daily_limit: limit })}
+                  disabled={saving}
+                  className={`px-6 py-3 rounded-lg font-medium transition-colors ${
+                    settings.daily_limit === limit
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+                >
+                  {limit} کارت
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hide Future Cards */}
+          <div className="space-y-3 pt-4 border-t">
+            <div className="flex items-center justify-between">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  مخفی کردن کارت‌های آینده
+                </label>
+                <p className="text-sm text-gray-500">
+                  کارت‌های باکس ۲ به بعد فقط در روز مرور قابل مشاهده باشند (جلوگیری از تقلب)
+                </p>
+              </div>
+              <button
+                onClick={() => saveSettings({ hide_future_cards: !settings.hide_future_cards })}
+                disabled={saving}
+                className={`relative w-14 h-8 rounded-full transition-colors ${
+                  settings.hide_future_cards ? 'bg-blue-600' : 'bg-gray-300'
+                } ${saving ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                <span
+                  className={`absolute top-1 w-6 h-6 bg-white rounded-full shadow transition-transform ${
+                    settings.hide_future_cards ? 'right-1' : 'left-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </div>

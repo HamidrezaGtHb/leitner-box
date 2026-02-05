@@ -78,6 +78,8 @@ export interface Review {
 export interface Settings {
   user_id: string;
   intervals: Record<string, number>;
+  daily_limit: number; // 5, 10, or 15 cards per day
+  hide_future_cards: boolean; // Hide Box 2+ cards until due date
   created_at: string;
   updated_at: string;
 }
