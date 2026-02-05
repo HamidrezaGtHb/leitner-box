@@ -191,9 +191,9 @@ export default function TodayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4 text-center mt-20 text-gray-600">
+        <div className="max-w-4xl mx-auto p-4 text-center mt-20 text-gray-600 dark:text-gray-400">
           {t.common.loading}
         </div>
       </div>
@@ -336,7 +336,7 @@ export default function TodayPage() {
 
   // MAIN VIEW - Show all cards
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Nav />
       <Celebration trigger={celebrate} />
 
@@ -344,8 +344,8 @@ export default function TodayPage() {
         {/* Header with Start Test button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{t.today.title}</h1>
-            <p className="text-gray-600 text-sm">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.today.title}</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">
               {totalDueCards > 0
                 ? `${totalDueCards} ${t.common.cards} ${t.today.dueForReview.toLowerCase()}`
                 : t.today.allReviewsDone}
@@ -366,11 +366,11 @@ export default function TodayPage() {
 
         {/* No cards message */}
         {totalDueCards === 0 && (
-          <Card padding="lg" className="text-center">
+          <Card padding="lg" className="text-center dark:bg-gray-800 dark:border-gray-700">
             <CardContent className="py-12 space-y-4">
               <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-xl font-bold text-gray-900">{t.today.noCardsToday}</h2>
-              <p className="text-gray-600">{t.today.comeBackTomorrow}</p>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.today.noCardsToday}</h2>
+              <p className="text-gray-600 dark:text-gray-400">{t.today.comeBackTomorrow}</p>
             </CardContent>
           </Card>
         )}
@@ -379,8 +379,8 @@ export default function TodayPage() {
         {learningCards.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <span className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">1</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold">1</span>
                 {t.today.newWords}
               </h2>
               <Badge variant="warning" size="md">{learningCards.length} {t.common.cards}</Badge>
@@ -397,28 +397,28 @@ export default function TodayPage() {
                     {/* Card header - clickable */}
                     <button
                       onClick={() => toggleCardExpand(card.id)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-black/5 transition-colors text-left"
+                      className="w-full p-4 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3">
                         {article && <ArticleBadge article={article} size="md" />}
-                        <span className="text-lg font-semibold text-gray-900">{card.term}</span>
+                        <span className="text-lg font-semibold text-gray-900 dark:text-white">{card.term}</span>
                       </div>
-                      <span className="text-gray-400 text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
+                      <span className="text-gray-400 dark:text-gray-500 text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
                         ▼
                       </span>
                     </button>
 
                     {/* Expanded content */}
                     {isExpanded && (
-                      <CardContent className="border-t bg-gray-50/50 space-y-4">
+                      <CardContent className="border-t dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-4">
                         {/* Meanings */}
                         <div>
-                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                             {t.today.meanings}
                           </div>
                           <ul className="space-y-1">
                             {card.back_json.meaning_fa.map((meaning, i) => (
-                              <li key={i} className="text-gray-800">• {meaning}</li>
+                              <li key={i} className="text-gray-800 dark:text-gray-200">• {meaning}</li>
                             ))}
                           </ul>
                         </div>
@@ -426,13 +426,13 @@ export default function TodayPage() {
                         {/* Examples */}
                         {card.back_json.examples.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                               {t.today.examples}
                             </div>
                             {card.back_json.examples.slice(0, 2).map((ex, i) => (
-                              <Card key={i} padding="sm" className="mb-2">
-                                <div className="text-gray-800 font-medium">{ex.de}</div>
-                                <div className="text-gray-600 text-sm">{ex.fa}</div>
+                              <Card key={i} padding="sm" className="mb-2 dark:bg-gray-700 dark:border-gray-600">
+                                <div className="text-gray-800 dark:text-gray-200 font-medium">{ex.de}</div>
+                                <div className="text-gray-600 dark:text-gray-400 text-sm">{ex.fa}</div>
                               </Card>
                             ))}
                           </div>
@@ -440,7 +440,7 @@ export default function TodayPage() {
 
                         {/* Grammar */}
                         {card.back_json.grammar.noun?.plural && (
-                          <div className="text-sm text-gray-600">
+                          <div className="text-sm text-gray-600 dark:text-gray-400">
                             <strong>{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
                           </div>
                         )}
@@ -448,7 +448,7 @@ export default function TodayPage() {
                         {/* Collocations */}
                         {card.back_json.collocations.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                               {t.today.collocations}
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -462,10 +462,10 @@ export default function TodayPage() {
                         {/* Learning Tips */}
                         {card.back_json.learning_tips.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                               {t.today.learningTips}
                             </div>
-                            <ul className="text-sm text-gray-600 space-y-1">
+                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                               {card.back_json.learning_tips.map((tip, i) => (
                                 <li key={i}>💡 {tip}</li>
                               ))}
@@ -485,8 +485,8 @@ export default function TodayPage() {
         {reviewCards.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold">2-5</span>
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">2-5</span>
                 {t.today.dueForReview}
               </h2>
               <Badge variant="info" size="md">{reviewCards.length} {t.common.cards}</Badge>
@@ -505,8 +505,8 @@ export default function TodayPage() {
                           <ArticleBadge article={article} size="sm" />
                         </div>
                       )}
-                      <div className="font-semibold text-gray-900 truncate">{card.term}</div>
-                      <div className="text-xs text-gray-500">{t.common.box} {card.box}</div>
+                      <div className="font-semibold text-gray-900 dark:text-white truncate">{card.term}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{t.common.box} {card.box}</div>
                     </CardContent>
                   </Card>
                 );
@@ -517,7 +517,7 @@ export default function TodayPage() {
 
         {/* Daily limit info */}
         {reviewCards.length >= settings.daily_limit && (
-          <div className="text-center text-sm text-gray-500 py-2">
+          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-2">
             {t.settings.dailyLimit}: {settings.daily_limit} {t.common.cards}
           </div>
         )}

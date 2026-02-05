@@ -25,3 +25,4 @@ export {
   type TextareaProps
 } from './input';
 export { Toggle, toggleVariants, type ToggleProps } from './toggle';
+export { CalendarIcon, SunIcon, MoonIcon } from './icons';

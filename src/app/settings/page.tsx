@@ -148,9 +148,9 @@ export default function SettingsPage() {
 
   if (loading || !settings) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4">{t.common.loading}</div>
+        <div className="max-w-4xl mx-auto p-4 text-gray-600 dark:text-gray-400">{t.common.loading}</div>
       </div>
     );
   }
@@ -158,18 +158,18 @@ export default function SettingsPage() {
   const intervals = settings.intervals as Record<string, number>;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-        <h1 className="text-2xl font-bold text-gray-900">{t.settings.title}</h1>
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.settings.title}</h1>
 
         {/* Language Settings Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.language}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.language}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {t.settings.languageDesc}
             </p>
             <div className="flex gap-2">
@@ -192,38 +192,38 @@ export default function SettingsPage() {
         </Card>
 
         {/* Statistics Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.statsReport}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.statsReport}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Main stats grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-                <div className="text-3xl font-bold text-blue-600">{stats.totalCards}</div>
-                <div className="text-sm text-gray-600">{t.settings.totalWords}</div>
+              <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 rounded-xl">
+                <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.totalCards}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{t.settings.totalWords}</div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl">
-                <div className="text-3xl font-bold text-emerald-600">{stats.totalReviews}</div>
-                <div className="text-sm text-gray-600">{t.settings.totalReviews}</div>
+              <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30 rounded-xl">
+                <div className="text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.totalReviews}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{t.settings.totalReviews}</div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
-                <div className="text-3xl font-bold text-amber-600">{stats.streak}</div>
-                <div className="text-sm text-gray-600">{t.settings.streak}</div>
+              <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30 rounded-xl">
+                <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats.streak}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{t.settings.streak}</div>
               </div>
-              <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                <div className="text-3xl font-bold text-purple-600">{stats.accuracy}%</div>
-                <div className="text-sm text-gray-600">{t.settings.accuracy}</div>
+              <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-900/30 dark:to-purple-800/30 rounded-xl">
+                <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.accuracy}%</div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">{t.settings.accuracy}</div>
               </div>
             </div>
 
             {/* Next review timer */}
             {stats.nextDue && (
-              <div className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl">
+              <div className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/30 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-gray-700">{t.settings.nextReview}</div>
-                    <div className="text-2xl font-bold text-indigo-600">
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">{t.settings.nextReview}</div>
+                    <div className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                       {stats.nextDue.hoursUntil < 24
                         ? `${stats.nextDue.hoursUntil} ${t.settings.hoursLater}`
                         : stats.nextDue.dueDate}
@@ -236,23 +236,23 @@ export default function SettingsPage() {
 
             {/* Box distribution */}
             <div>
-              <h3 className="text-sm font-medium text-gray-700 mb-3">{t.settings.boxDistribution}</h3>
+              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">{t.settings.boxDistribution}</h3>
               <div className="space-y-2">
                 {[1, 2, 3, 4, 5].map((box) => {
                   const count = stats.boxDistribution[box] || 0;
                   const percentage = stats.totalCards > 0 ? (count / stats.totalCards) * 100 : 0;
                   return (
                     <div key={box} className="flex items-center gap-3">
-                      <div className="w-16 text-sm font-medium text-gray-600">{t.common.box} {box}</div>
-                      <div className="flex-1 h-8 bg-gray-100 rounded-lg overflow-hidden">
+                      <div className="w-16 text-sm font-medium text-gray-600 dark:text-gray-400">{t.common.box} {box}</div>
+                      <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-gray-700 to-gray-800 flex items-center justify-end px-2 text-white text-sm font-medium transition-all"
+                          className="h-full bg-gradient-to-r from-gray-700 to-gray-800 dark:from-gray-500 dark:to-gray-400 flex items-center justify-end px-2 text-white dark:text-gray-900 text-sm font-medium transition-all"
                           style={{ width: `${Math.max(percentage, count > 0 ? 10 : 0)}%` }}
                         >
                           {count > 0 && count}
                         </div>
                       </div>
-                      <div className="w-8 text-sm text-gray-600 text-left">{count}</div>
+                      <div className="w-8 text-sm text-gray-600 dark:text-gray-400 text-left">{count}</div>
                     </div>
                   );
                 })}
@@ -262,17 +262,17 @@ export default function SettingsPage() {
         </Card>
 
         {/* Learning Settings Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.learningSettings}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.learningSettings}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Daily Limit */}
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t.settings.dailyLimit}
               </label>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {t.settings.dailyLimitDesc}
               </p>
               <div className="flex gap-2 flex-wrap">
@@ -291,7 +291,7 @@ export default function SettingsPage() {
             </div>
 
             {/* Hide Future Cards */}
-            <div className="pt-4 border-t border-gray-100">
+            <div className="pt-4 border-t border-gray-100 dark:border-gray-700">
               <Toggle
                 checked={settings.hide_future_cards}
                 onChange={(checked) => saveSettings({ hide_future_cards: checked })}
@@ -304,20 +304,20 @@ export default function SettingsPage() {
         </Card>
 
         {/* Review Intervals Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.reviewIntervals}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.reviewIntervals}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {t.settings.reviewIntervalsDesc}
             </p>
             <div className="grid grid-cols-5 gap-3">
               {[1, 2, 3, 4, 5].map((box) => (
-                <div key={box} className="text-center p-4 bg-gray-50 rounded-xl">
-                  <div className="text-xs font-medium text-gray-500 mb-2">{t.common.box} {box}</div>
-                  <div className="text-2xl font-bold text-gray-900">{intervals[box]}</div>
-                  <div className="text-xs text-gray-500">{t.settings.day}</div>
+                <div key={box} className="text-center p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
+                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">{t.common.box} {box}</div>
+                  <div className="text-2xl font-bold text-gray-900 dark:text-white">{intervals[box]}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{t.settings.day}</div>
                 </div>
               ))}
             </div>
@@ -325,12 +325,12 @@ export default function SettingsPage() {
         </Card>
 
         {/* How it Works Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.howItWorks}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.howItWorks}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="space-y-2 text-sm text-gray-700">
+            <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
               {t.settings.howItWorksItems.map((item, index) => (
                 <li key={index}>• {item}</li>
               ))}
@@ -339,12 +339,12 @@ export default function SettingsPage() {
         </Card>
 
         {/* Account Card */}
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardHeader>
-            <CardTitle>{t.settings.account}</CardTitle>
+            <CardTitle className="dark:text-white">{t.settings.account}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               {t.settings.accountDesc}
             </p>
             <Button

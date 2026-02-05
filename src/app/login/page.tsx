@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
-import { Button, Card, CardContent, Input } from '@/components/ui';
-import { useLanguage, Language } from '@/lib/i18n';
+import { Button, Card, CardContent, Input, CalendarIcon, SunIcon, MoonIcon } from '@/components/ui';
+import { useLanguage } from '@/lib/i18n';
+import { useTheme } from '@/lib/theme';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
   const { language, setLanguage, t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,10 +51,17 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 px-4 transition-colors">
       <div className="max-w-md w-full space-y-8">
-        {/* Language Toggle */}
-        <div className="flex justify-end">
+        {/* Top Controls */}
+        <div className="flex justify-between items-center">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-lg text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            aria-label="Toggle theme"
+          >
+            {theme === 'light' ? <MoonIcon size={20} /> : <SunIcon size={20} />}
+          </button>
           <Button
             variant="ghost"
             size="sm"
@@ -63,12 +72,14 @@ export default function LoginPage() {
         </div>
 
         <div className="text-center">
-          <div className="text-6xl mb-4">📦</div>
-          <h1 className="text-3xl font-bold text-gray-900">40Tagen</h1>
-          <p className="mt-2 text-gray-600">{t.login.subtitle}</p>
+          <div className="flex justify-center mb-4">
+            <CalendarIcon size={64} className="text-gray-900 dark:text-white" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">40Tagen</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">{t.login.subtitle}</p>
         </div>
 
-        <Card padding="lg">
+        <Card padding="lg" className="dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="space-y-6">
             <div className="flex gap-2">
               <Button
@@ -111,7 +122,7 @@ export default function LoginPage() {
               />
 
               {error && (
-                <div className="text-sm text-rose-600 bg-rose-50 p-3 rounded-lg">
+                <div className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20 p-3 rounded-lg">
                   {error}
                 </div>
               )}
@@ -129,7 +140,7 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="text-center text-sm text-gray-500">
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
           {t.login.footer}
         </p>
       </div>
