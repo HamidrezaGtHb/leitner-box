@@ -64,7 +64,7 @@ export default function LoginPage() {
 
         <div className="text-center">
           <div className="text-6xl mb-4">📦</div>
-          <h1 className="text-3xl font-bold text-gray-900">لایتنر من</h1>
+          <h1 className="text-3xl font-bold text-gray-900">40Tagen</h1>
           <p className="mt-2 text-gray-600">{t.login.subtitle}</p>
         </div>
 

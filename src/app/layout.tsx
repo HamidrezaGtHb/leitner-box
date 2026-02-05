@@ -7,7 +7,7 @@ import { Providers } from '@/components/providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Leitner Flashcards',
+  title: '40Tagen',
   description: 'Learn German vocabulary with Leitner system',
 };
 

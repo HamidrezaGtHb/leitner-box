@@ -4,7 +4,7 @@ export const translations = {
   en: {
     // App
     app: {
-      name: 'My Leitner',
+      name: '40Tagen',
     },
 
     // Navigation
@@ -189,7 +189,7 @@ export const translations = {
   de: {
     // App
     app: {
-      name: 'Mein Leitner',
+      name: '40Tagen',
     },
 
     // Navigation

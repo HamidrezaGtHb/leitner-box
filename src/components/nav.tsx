@@ -28,7 +28,7 @@ export function Nav() {
             className="flex items-center gap-2 font-bold text-xl text-gray-900 hover:text-gray-700 transition-colors"
           >
             <span className="text-2xl">📦</span>
-            <span className="hidden sm:inline font-semibold">لایتنر من</span>
+            <span className="hidden sm:inline font-semibold">40Tagen</span>
           </Link>
 
           {/* Desktop Nav */}
