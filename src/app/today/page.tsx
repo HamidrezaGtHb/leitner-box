@@ -3,9 +3,11 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
-import { Card, Settings } from '@/types';
+import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
+import { Button, Card, CardContent, ArticleBadge, BoxBadge, Badge } from '@/components/ui';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
 type ViewMode = 'learning' | 'testing';
@@ -20,8 +22,8 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export default function TodayPage() {
-  const [box1Cards, setBox1Cards] = useState<Card[]>([]);
-  const [testCards, setTestCards] = useState<Card[]>([]);
+  const [box1Cards, setBox1Cards] = useState<CardType[]>([]);
+  const [testCards, setTestCards] = useState<CardType[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -30,6 +32,7 @@ export default function TodayPage() {
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   useEffect(() => {
     loadData();
@@ -43,7 +46,7 @@ export default function TodayPage() {
 
     if (!user) {
       setLoading(false);
-      toast.error('لطفاً وارد شوید');
+      toast.error(t.errors.pleaseLogin);
       return;
     }
 
@@ -69,7 +72,7 @@ export default function TodayPage() {
 
     if (error) {
       console.error('Error loading due cards:', error);
-      toast.error('خطا در بارگذاری کارت‌ها');
+      toast.error(t.errors.loadingCards);
     } else {
       const allCards = data || [];
       // Separate Box 1 (Learning) from Box 2+ (Testing)
@@ -116,7 +119,7 @@ export default function TodayPage() {
 
     if (updateError) {
       console.error('Error updating card:', updateError);
-      toast.error('خطا در به‌روزرسانی کارت');
+      toast.error(t.errors.updatingCard);
       return;
     }
 
@@ -131,9 +134,9 @@ export default function TodayPage() {
 
     // Show feedback
     if (result === 'correct') {
-      toast.success(`عالی! به باکس ${newBox} منتقل شد`);
+      toast.success(`${t.today.movedToBox} ${newBox}`);
     } else {
-      toast.error('برگشت به باکس 1');
+      toast.error(t.today.backToBox1);
     }
 
     // Move to next card or finish
@@ -149,10 +152,10 @@ export default function TodayPage() {
         if (testCards.length > 0) {
           setViewMode('testing');
           setCurrentIndex(0);
-          toast.success('یادگیری تمام! حالا آزمون باکس‌های بعدی');
+          toast.success(t.today.learningDone);
         } else {
           setCelebrate(true);
-          toast.success('🎉 تمام مرورهای امروز تکمیل شد!', { duration: 4000 });
+          toast.success(t.today.allReviewsComplete, { duration: 4000 });
         }
       } else {
         setCurrentIndex(Math.min(currentIndex, remaining.length - 1));
@@ -165,7 +168,7 @@ export default function TodayPage() {
         setTestCards([]);
         setCurrentIndex(0);
         setCelebrate(true);
-        toast.success('🎉 تمام مرورهای امروز تکمیل شد!', { duration: 4000 });
+        toast.success(t.today.allReviewsComplete, { duration: 4000 });
       }
     }
   };
@@ -174,12 +177,21 @@ export default function TodayPage() {
     setExpandedCard(expandedCard === cardId ? null : cardId);
   };
 
+  const getCardVariant = (article: string | null | undefined) => {
+    if (!article) return 'default' as const;
+    const lower = article.toLowerCase();
+    if (lower === 'der') return 'der' as const;
+    if (lower === 'die') return 'die' as const;
+    if (lower === 'das') return 'das' as const;
+    return 'default' as const;
+  };
+
   if (loading) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4 text-center mt-20">
-          در حال بارگذاری...
+        <div className="max-w-4xl mx-auto p-4 text-center mt-20 text-gray-600">
+          {t.common.loading}
         </div>
       </div>
     );
@@ -188,18 +200,21 @@ export default function TodayPage() {
   // No cards at all
   if (box1Cards.length === 0 && testCards.length === 0) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Nav />
         <div className="max-w-4xl mx-auto p-4">
-          <div className="text-center mt-20 space-y-4">
-            <h1 className="text-3xl font-bold">کارتی برای امروز نیست!</h1>
-            <p className="text-gray-600">
-              همه مرورهای امروز تکمیل شده.
-            </p>
-            <p className="text-sm text-gray-500">
-              فردا برگرد یا از Backlog کارت جدید اضافه کن.
-            </p>
-          </div>
+          <Card padding="lg" className="text-center mt-20">
+            <CardContent className="space-y-4">
+              <div className="text-6xl mb-4">🎉</div>
+              <h1 className="text-2xl font-bold text-gray-900">{t.today.noCardsToday}</h1>
+              <p className="text-gray-600">
+                {t.today.allReviewsDone}
+              </p>
+              <p className="text-sm text-gray-500">
+                {t.today.comeBackTomorrow}
+              </p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -208,200 +223,219 @@ export default function TodayPage() {
   // LEARNING MODE - Box 1
   if (viewMode === 'learning' && box1Cards.length > 0) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Nav />
         <Celebration trigger={celebrate} />
         <div className="max-w-4xl mx-auto p-4">
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold">حالت یادگیری</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{t.today.learningMode}</h1>
               <p className="text-sm text-gray-600">
-                باکس ۱ - روی هر کارت کلیک کن تا جزئیات رو ببینی
+                {t.today.learningDesc}
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold text-blue-600">{box1Cards.length}</div>
-              <div className="text-sm text-gray-600">کارت برای یادگیری</div>
+            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
+              <div className="text-3xl font-bold text-blue-600">{box1Cards.length}</div>
+              <div className="text-sm text-gray-600">{t.today.card}</div>
             </div>
           </div>
 
           {/* Mode Switch */}
           <div className="mb-6 flex gap-3">
-            <button
-              onClick={() => setViewMode('learning')}
-              className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium"
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
             >
-              📖 یادگیری ({box1Cards.length})
-            </button>
-            <button
-              onClick={() => setViewMode('testing')}
+              📖 {t.today.learning} ({box1Cards.length})
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="flex-1"
               disabled={testCards.length === 0}
-              className={`flex-1 py-3 rounded-lg font-medium ${
-                testCards.length > 0
-                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  : 'bg-gray-50 text-gray-400 cursor-not-allowed'
-              }`}
+              onClick={() => setViewMode('testing')}
             >
-              📝 آزمون ({testCards.length})
-            </button>
+              📝 {t.today.testing} ({testCards.length})
+            </Button>
           </div>
 
           {/* Cards List */}
           <div className="space-y-4">
-            {box1Cards.map((card) => (
-              <div
-                key={card.id}
-                className="bg-white border rounded-lg overflow-hidden shadow-sm"
-              >
-                {/* Card Header - Always visible */}
-                <button
-                  onClick={() => toggleCardExpand(card.id)}
-                  className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+            {box1Cards.map((card) => {
+              const article = card.back_json.grammar.noun?.article;
+              const cardVariant = getCardVariant(article);
+              return (
+                <Card
+                  key={card.id}
+                  variant={cardVariant}
+                  className="overflow-hidden"
                 >
-                  <div className="text-xl font-bold">{card.term}</div>
-                  <div className="flex items-center gap-3">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      باکس ۱
-                    </span>
-                    <span className="text-gray-400">
-                      {expandedCard === card.id ? '▲' : '▼'}
-                    </span>
-                  </div>
-                </button>
-
-                {/* Card Details - Expandable */}
-                {expandedCard === card.id && (
-                  <div className="p-4 border-t bg-gray-50 space-y-4">
-                    {/* Meanings */}
-                    <div>
-                      <div className="text-sm font-semibold text-gray-700 mb-2">
-                        معانی:
-                      </div>
-                      <ul className="list-disc list-inside space-y-1" dir="rtl">
-                        {card.back_json.meaning_fa.map((meaning, i) => (
-                          <li key={i} className="text-gray-800">{meaning}</li>
-                        ))}
-                      </ul>
+                  {/* Card Header - Always visible */}
+                  <button
+                    onClick={() => toggleCardExpand(card.id)}
+                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      {article && <ArticleBadge article={article} size="md" />}
+                      <span className="text-xl font-bold text-gray-900">{card.term}</span>
                     </div>
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">
+                        {t.common.box} 1
+                      </span>
+                      <span className="text-gray-400 text-lg">
+                        {expandedCard === card.id ? '▲' : '▼'}
+                      </span>
+                    </div>
+                  </button>
 
-                    {/* Examples */}
-                    {card.back_json.examples.length > 0 && (
+                  {/* Card Details - Expandable */}
+                  {expandedCard === card.id && (
+                    <CardContent className="border-t bg-gray-50 space-y-4">
+                      {/* Meanings */}
                       <div>
                         <div className="text-sm font-semibold text-gray-700 mb-2">
-                          مثال‌ها:
+                          {t.today.meanings}
                         </div>
-                        {card.back_json.examples.map((ex, i) => (
-                          <div key={i} className="mb-2 p-3 bg-white rounded border">
-                            <div className="text-gray-800 font-medium">{ex.de}</div>
-                            <div className="text-gray-600 text-sm" dir="rtl">{ex.fa}</div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Grammar */}
-                    {card.back_json.grammar.noun && (
-                      <div className="text-sm">
-                        <strong>Article:</strong> {card.back_json.grammar.noun.article}
-                        {card.back_json.grammar.noun.plural && (
-                          <> | <strong>Plural:</strong> {card.back_json.grammar.noun.plural}</>
-                        )}
-                      </div>
-                    )}
-
-                    {card.back_json.grammar.verb && (
-                      <div className="text-sm space-y-1">
-                        {card.back_json.grammar.verb.perfekt_aux && (
-                          <div><strong>Perfekt:</strong> {card.back_json.grammar.verb.perfekt_aux} + {card.back_json.grammar.verb.partizip2}</div>
-                        )}
-                        {card.back_json.grammar.verb.praeteritum && (
-                          <div><strong>Präteritum:</strong> {card.back_json.grammar.verb.praeteritum}</div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Collocations */}
-                    {card.back_json.collocations.length > 0 && (
-                      <div>
-                        <div className="text-sm font-semibold text-gray-700 mb-1">
-                          ترکیب‌های رایج:
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {card.back_json.collocations.map((col, i) => (
-                            <span key={i} className="text-sm bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              {col}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Learning Tips */}
-                    {card.back_json.learning_tips.length > 0 && (
-                      <div>
-                        <div className="text-sm font-semibold text-gray-700 mb-1">
-                          نکات یادگیری:
-                        </div>
-                        <ul className="text-sm text-gray-600 space-y-1" dir="rtl">
-                          {card.back_json.learning_tips.map((tip, i) => (
-                            <li key={i}>💡 {tip}</li>
+                        <ul className="list-disc list-inside space-y-1">
+                          {card.back_json.meaning_fa.map((meaning, i) => (
+                            <li key={i} className="text-gray-800">{meaning}</li>
                           ))}
                         </ul>
                       </div>
-                    )}
 
-                    {/* Test Button */}
-                    <div className="pt-4 border-t flex gap-3">
-                      <button
-                        onClick={() => {
-                          setCurrentIndex(box1Cards.findIndex(c => c.id === card.id));
-                          setShowAnswer(true);
-                          setExpandedCard(null);
-                        }}
-                        className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700"
-                      >
-                        ✓ یاد گرفتم - تست بده
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                      {/* Examples */}
+                      {card.back_json.examples.length > 0 && (
+                        <div>
+                          <div className="text-sm font-semibold text-gray-700 mb-2">
+                            {t.today.examples}
+                          </div>
+                          {card.back_json.examples.map((ex, i) => (
+                            <Card key={i} padding="sm" className="mb-2">
+                              <div className="text-gray-800 font-medium">{ex.de}</div>
+                              <div className="text-gray-600 text-sm">{ex.fa}</div>
+                            </Card>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Grammar */}
+                      {card.back_json.grammar.noun && (
+                        <div className="flex items-center gap-3 text-sm">
+                          <ArticleBadge article={card.back_json.grammar.noun.article} size="sm" />
+                          {card.back_json.grammar.noun.plural && (
+                            <span className="text-gray-600">
+                              <strong>{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {card.back_json.grammar.verb && (
+                        <div className="text-sm space-y-1 text-gray-700">
+                          {card.back_json.grammar.verb.perfekt_aux && (
+                            <div><strong>Perfekt:</strong> {card.back_json.grammar.verb.perfekt_aux} + {card.back_json.grammar.verb.partizip2}</div>
+                          )}
+                          {card.back_json.grammar.verb.praeteritum && (
+                            <div><strong>Präteritum:</strong> {card.back_json.grammar.verb.praeteritum}</div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Collocations */}
+                      {card.back_json.collocations.length > 0 && (
+                        <div>
+                          <div className="text-sm font-semibold text-gray-700 mb-2">
+                            {t.today.collocations}
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {card.back_json.collocations.map((col, i) => (
+                              <Badge key={i} variant="warning" size="sm">
+                                {col}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Learning Tips */}
+                      {card.back_json.learning_tips.length > 0 && (
+                        <div>
+                          <div className="text-sm font-semibold text-gray-700 mb-2">
+                            {t.today.learningTips}
+                          </div>
+                          <ul className="text-sm text-gray-600 space-y-1">
+                            {card.back_json.learning_tips.map((tip, i) => (
+                              <li key={i}>💡 {tip}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Test Button */}
+                      <div className="pt-4 border-t">
+                        <Button
+                          variant="success"
+                          size="lg"
+                          className="w-full"
+                          onClick={() => {
+                            setCurrentIndex(box1Cards.findIndex(c => c.id === card.id));
+                            setShowAnswer(true);
+                            setExpandedCard(null);
+                          }}
+                        >
+                          ✓ {t.today.iLearned}
+                        </Button>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              );
+            })}
           </div>
 
           {/* Test Modal for Box 1 */}
           {showAnswer && box1Cards[currentIndex] && (
             <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg p-6 max-w-md w-full space-y-4">
-                <h2 className="text-xl font-bold text-center">آزمون</h2>
-                <p className="text-center text-gray-600">
-                  آیا معنی این کلمه رو بلدی؟
-                </p>
-                <div className="text-3xl font-bold text-center py-4">
-                  {box1Cards[currentIndex].term}
-                </div>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => handleAnswer('wrong')}
-                    className="flex-1 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-lg"
+              <Card padding="lg" className="max-w-md w-full">
+                <CardContent className="space-y-4">
+                  <h2 className="text-xl font-bold text-center text-gray-900">{t.today.test}</h2>
+                  <p className="text-center text-gray-600">
+                    {t.today.testQuestion}
+                  </p>
+                  <div className="text-3xl font-bold text-center py-4 text-gray-900">
+                    {box1Cards[currentIndex].term}
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="danger"
+                      size="lg"
+                      className="flex-1"
+                      onClick={() => handleAnswer('wrong')}
+                    >
+                      {t.today.iDontKnow}
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="lg"
+                      className="flex-1"
+                      onClick={() => handleAnswer('correct')}
+                    >
+                      {t.today.iKnow}
+                    </Button>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="md"
+                    className="w-full"
+                    onClick={() => setShowAnswer(false)}
                   >
-                    نه، بلد نیستم
-                  </button>
-                  <button
-                    onClick={() => handleAnswer('correct')}
-                    className="flex-1 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-lg"
-                  >
-                    بله، بلدم
-                  </button>
-                </div>
-                <button
-                  onClick={() => setShowAnswer(false)}
-                  className="w-full py-2 text-gray-600 hover:text-gray-800"
-                >
-                  انصراف
-                </button>
-              </div>
+                    {t.common.cancel}
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           )}
         </div>
@@ -414,53 +448,64 @@ export default function TodayPage() {
 
   if (!currentCard) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Nav />
         <Celebration trigger={celebrate} />
         <div className="max-w-4xl mx-auto p-4">
-          <div className="text-center mt-20 space-y-4">
-            <h1 className="text-3xl font-bold">آزمون تمام شد!</h1>
-            <p className="text-gray-600">همه کارت‌های امروز رو مرور کردی.</p>
-          </div>
+          <Card padding="lg" className="text-center mt-20">
+            <CardContent className="space-y-4">
+              <div className="text-6xl mb-4">🎉</div>
+              <h1 className="text-2xl font-bold text-gray-900">{t.today.testFinished}</h1>
+              <p className="text-gray-600">{t.today.reviewedAllCards}</p>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
+  const currentArticle = currentCard.back_json.grammar.noun?.article;
+  const currentCardVariant = getCardVariant(currentArticle);
+
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Nav />
       <Celebration trigger={celebrate} />
       <div className="max-w-2xl mx-auto p-4">
         {/* Mode Switch */}
         {box1Cards.length > 0 && (
           <div className="mb-6 flex gap-3">
-            <button
+            <Button
+              variant="secondary"
+              size="lg"
+              className="flex-1"
               onClick={() => setViewMode('learning')}
-              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200"
             >
-              📖 یادگیری ({box1Cards.length})
-            </button>
-            <button
-              onClick={() => setViewMode('testing')}
-              className="flex-1 py-3 bg-blue-600 text-white rounded-lg font-medium"
+              📖 {t.today.learning} ({box1Cards.length})
+            </Button>
+            <Button
+              variant="primary"
+              size="lg"
+              className="flex-1"
             >
-              📝 آزمون ({testCards.length})
-            </button>
+              📝 {t.today.testing} ({testCards.length})
+            </Button>
           </div>
         )}
 
         <div className="mb-4 flex items-center justify-between">
           <div className="text-sm text-gray-600">
-            کارت {currentIndex + 1} از {testCards.length}
+            {t.today.card} {currentIndex + 1} / {testCards.length}
           </div>
-          <div className="text-sm text-gray-600">باکس {currentCard.box}</div>
+          <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full font-medium">
+            {t.common.box} {currentCard.box}
+          </span>
         </div>
 
         {/* Progress bar */}
         <div className="mb-6 h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-blue-600 transition-all"
+            className="h-full bg-gray-900 transition-all duration-300"
             style={{
               width: `${((currentIndex + 1) / testCards.length) * 100}%`,
             }}
@@ -468,20 +513,21 @@ export default function TodayPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white border rounded-lg p-8 min-h-[400px] flex flex-col items-center justify-center shadow-lg">
+        <Card variant={currentCardVariant} padding="lg" className="min-h-[400px] flex flex-col items-center justify-center shadow-lg">
           {!showAnswer ? (
-            <div className="text-center space-y-6 w-full">
-              <div className="text-4xl font-bold">{currentCard.term}</div>
-              <button
+            <CardContent className="text-center space-y-6 w-full">
+              <div className="text-4xl font-bold text-gray-900">{currentCard.term}</div>
+              <Button
+                variant="primary"
+                size="xl"
                 onClick={() => setShowAnswer(true)}
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-lg font-medium min-w-[200px]"
               >
-                نمایش جواب
-              </button>
-            </div>
+                {t.today.showAnswer}
+              </Button>
+            </CardContent>
           ) : (
-            <div className="w-full space-y-6">
-              <div className="text-3xl font-bold text-center">
+            <CardContent className="w-full space-y-6">
+              <div className="text-3xl font-bold text-center text-gray-900">
                 {currentCard.term}
               </div>
 
@@ -489,9 +535,9 @@ export default function TodayPage() {
                 {/* Meanings */}
                 <div>
                   <div className="text-sm font-semibold text-gray-700 mb-2">
-                    معانی:
+                    {t.today.meanings}
                   </div>
-                  <ul className="list-disc list-inside space-y-1" dir="rtl">
+                  <ul className="list-disc list-inside space-y-1">
                     {currentCard.back_json.meaning_fa.map((meaning, i) => (
                       <li key={i} className="text-gray-800">
                         {meaning}
@@ -504,12 +550,12 @@ export default function TodayPage() {
                 {currentCard.back_json.examples.length > 0 && (
                   <div>
                     <div className="text-sm font-semibold text-gray-700 mb-2">
-                      مثال‌ها:
+                      {t.today.examples}
                     </div>
                     {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
                       <div key={i} className="mb-2 text-sm">
                         <div className="text-gray-800">{ex.de}</div>
-                        <div className="text-gray-600" dir="rtl">
+                        <div className="text-gray-600">
                           {ex.fa}
                         </div>
                       </div>
@@ -519,15 +565,12 @@ export default function TodayPage() {
 
                 {/* Grammar */}
                 {currentCard.back_json.grammar.noun && (
-                  <div className="text-sm">
-                    <strong>Article:</strong>{' '}
-                    {currentCard.back_json.grammar.noun.article}
+                  <div className="flex items-center gap-3 text-sm">
+                    <ArticleBadge article={currentCard.back_json.grammar.noun.article} size="sm" />
                     {currentCard.back_json.grammar.noun.plural && (
-                      <>
-                        {' '}
-                        | <strong>Plural:</strong>{' '}
-                        {currentCard.back_json.grammar.noun.plural}
-                      </>
+                      <span className="text-gray-600">
+                        <strong>{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                      </span>
                     )}
                   </div>
                 )}
@@ -535,22 +578,26 @@ export default function TodayPage() {
 
               {/* Answer buttons */}
               <div className="flex gap-3 mt-8">
-                <button
+                <Button
+                  variant="danger"
+                  size="xl"
+                  className="flex-1"
                   onClick={() => handleAnswer('wrong')}
-                  className="flex-1 py-4 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium text-lg"
                 >
-                  غلط
-                </button>
-                <button
+                  {t.common.wrong}
+                </Button>
+                <Button
+                  variant="success"
+                  size="xl"
+                  className="flex-1"
                   onClick={() => handleAnswer('correct')}
-                  className="flex-1 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium text-lg"
                 >
-                  درست
-                </button>
+                  {t.common.correct}
+                </Button>
               </div>
-            </div>
+            </CardContent>
           )}
-        </div>
+        </Card>
       </div>
     </div>
   );

@@ -25,30 +25,51 @@ export async function extractTextFromImage(
 
 /**
  * Parse extracted text to find German terms
- * Looks for patterns like "der/die/das Word" for nouns, or standalone words
+ * More flexible: extracts any German-looking words
  */
 export function parseGermanTerms(lines: string[]): string[] {
   const terms: string[] = [];
+  const seenTerms = new Set<string>();
 
   for (const line of lines) {
-    // Pattern 1: Lines starting with articles (der, die, das)
-    const articleMatch = line.match(/^(der|die|das)\s+([A-ZÄÖÜ][a-zäöüß]+)/i);
-    if (articleMatch) {
-      terms.push(`${articleMatch[1]} ${articleMatch[2]}`);
-      continue;
-    }
+    // Skip very short lines or lines with numbers only
+    if (line.length < 2 || /^\d+$/.test(line)) continue;
 
-    // Pattern 2: Just capitalized German words (potential nouns)
-    const capitalizedMatch = line.match(/^([A-ZÄÖÜ][a-zäöüß]+)$/);
-    if (capitalizedMatch) {
-      terms.push(capitalizedMatch[1]);
-      continue;
-    }
+    // Extract all potential German words from the line
+    // Matches words with German characters (including umlauts and ß)
+    const words = line.match(/[a-zäöüßA-ZÄÖÜ][a-zäöüßA-ZÄÖÜ]+/g) || [];
 
-    // Pattern 3: Verbs in infinitive (lowercase, ending in -en, -ern, -eln)
-    const verbMatch = line.match(/^([a-zäöüß]+(?:en|ern|eln))$/);
-    if (verbMatch) {
-      terms.push(verbMatch[1]);
+    for (const word of words) {
+      // Skip very short words and common non-German patterns
+      if (word.length < 3) continue;
+      if (/^[A-Z]+$/.test(word)) continue; // Skip all caps (likely abbreviations)
+      
+      // Normalize: trim and check for duplicates
+      const normalized = word.trim();
+      const lowerNormalized = normalized.toLowerCase();
+      
+      // Skip if already added (case-insensitive)
+      if (seenTerms.has(lowerNormalized)) continue;
+      
+      // Pattern 1: Capitalized words (likely nouns)
+      if (/^[A-ZÄÖÜ][a-zäöüß]+$/.test(normalized)) {
+        terms.push(normalized);
+        seenTerms.add(lowerNormalized);
+        continue;
+      }
+
+      // Pattern 2: Lowercase words ending in common verb suffixes
+      if (/^[a-zäöüß]+(?:en|ern|eln|ieren)$/.test(normalized)) {
+        terms.push(normalized);
+        seenTerms.add(lowerNormalized);
+        continue;
+      }
+
+      // Pattern 3: Any word with German umlauts (likely German)
+      if (/[äöüßÄÖÜ]/.test(normalized)) {
+        terms.push(normalized);
+        seenTerms.add(lowerNormalized);
+      }
     }
   }
 

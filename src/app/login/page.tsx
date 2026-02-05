@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
+import { Button, Card, CardContent, Input } from '@/components/ui';
+import { useLanguage, Language } from '@/lib/i18n';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +14,7 @@ export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const router = useRouter();
   const supabase = createClient();
+  const { language, setLanguage, t } = useLanguage();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +28,7 @@ export default function LoginPage() {
           password,
         });
         if (error) throw error;
-        alert('Check your email to confirm your account!');
+        alert(t.login.confirmEmail);
       } else {
         const { error } = await supabase.auth.signInWithPassword({
           email,
@@ -41,78 +44,94 @@ export default function LoginPage() {
     }
   };
 
+  const toggleLanguage = () => {
+    setLanguage(language === 'en' ? 'de' : 'en');
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold">Leitner Flashcards</h1>
-          <p className="mt-2 text-gray-600">Learn German vocabulary</p>
+        {/* Language Toggle */}
+        <div className="flex justify-end">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleLanguage}
+          >
+            {language === 'en' ? '🇩🇪 Deutsch' : '🇬🇧 English'}
+          </Button>
         </div>
 
-        <div className="bg-white p-8 rounded-lg shadow">
-          <div className="flex gap-2 mb-6">
-            <button
-              onClick={() => setMode('login')}
-              className={`flex-1 py-2 rounded ${
-                mode === 'login'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              Login
-            </button>
-            <button
-              onClick={() => setMode('signup')}
-              className={`flex-1 py-2 rounded ${
-                mode === 'signup'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              Sign up
-            </button>
-          </div>
+        <div className="text-center">
+          <div className="text-6xl mb-4">📚</div>
+          <h1 className="text-3xl font-bold text-gray-900">{t.login.title}</h1>
+          <p className="mt-2 text-gray-600">{t.login.subtitle}</p>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-1">Email</label>
-              <input
+        <Card padding="lg">
+          <CardContent className="space-y-6">
+            <div className="flex gap-2">
+              <Button
+                variant={mode === 'login' ? 'primary' : 'secondary'}
+                size="md"
+                className="flex-1"
+                onClick={() => setMode('login')}
+              >
+                {t.login.loginTab}
+              </Button>
+              <Button
+                variant={mode === 'signup' ? 'primary' : 'secondary'}
+                size="md"
+                className="flex-1"
+                onClick={() => setMode('signup')}
+              >
+                {t.login.signupTab}
+              </Button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
                 type="email"
+                label={t.login.email}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t.login.emailPlaceholder}
+                inputSize="md"
               />
-            </div>
 
-            <div>
-              <label className="block text-sm font-medium mb-1">
-                Password
-              </label>
-              <input
+              <Input
                 type="password"
+                label={t.login.password}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder={t.login.passwordPlaceholder}
+                inputSize="md"
               />
-            </div>
 
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 p-3 rounded">
-                {error}
-              </div>
-            )}
+              {error && (
+                <div className="text-sm text-rose-600 bg-rose-50 p-3 rounded-lg">
+                  {error}
+                </div>
+              )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-2 px-4 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-            >
-              {loading ? 'Loading...' : mode === 'login' ? 'Login' : 'Sign up'}
-            </button>
-          </form>
-        </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={loading}
+              >
+                {mode === 'login' ? t.login.loginButton : t.login.signupButton}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <p className="text-center text-sm text-gray-500">
+          {t.login.footer}
+        </p>
       </div>
     </div>
   );

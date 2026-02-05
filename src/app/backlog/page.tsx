@@ -9,6 +9,8 @@ import { completeBacklogToCardAction } from '@/app/actions/ai-actions';
 import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
 import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
 import { CSVImportDialog } from '@/components/csv-import-dialog';
+import { Button, Card, CardContent, Input } from '@/components/ui';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
 export default function BacklogPage() {
@@ -20,6 +22,7 @@ export default function BacklogPage() {
   const [showOCRDialog, setShowOCRDialog] = useState(false);
   const [showCSVDialog, setShowCSVDialog] = useState(false);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   useEffect(() => {
     loadBacklog();
@@ -49,7 +52,7 @@ export default function BacklogPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('لطفاً وارد شوید');
+      toast.error(t.errors.pleaseLogin);
       return;
     }
 
@@ -64,7 +67,7 @@ export default function BacklogPage() {
       .single();
 
     if (existingCard) {
-      toast.error('این کلمه قبلاً در کارت‌ها وجود دارد');
+      toast.error(t.backlog.alreadyInCards);
       return;
     }
 
@@ -76,13 +79,13 @@ export default function BacklogPage() {
 
     if (error) {
       if (error.code === '23505') {
-        toast.error('این کلمه قبلاً در Backlog وجود دارد');
+        toast.error(t.backlog.alreadyInBacklog);
       } else {
-        toast.error('خطا در افزودن کلمه');
+        toast.error(t.backlog.addError);
         console.error('Error adding to backlog:', error);
       }
     } else {
-      toast.success('کلمه به Backlog اضافه شد');
+      toast.success(t.backlog.addedToBacklog);
       setNewTerm('');
       loadBacklog();
     }
@@ -92,7 +95,7 @@ export default function BacklogPage() {
     setConverting(item.id);
 
     const loadingToast = toast.loading(
-      useAI ? 'در حال تولید محتوا با AI...' : 'در حال ایجاد کارت...'
+      useAI ? t.backlog.generatingAI : t.backlog.creatingCard
     );
 
     try {
@@ -102,14 +105,14 @@ export default function BacklogPage() {
       );
 
       if (result.success) {
-        toast.success('کارت با موفقیت ایجاد شد', { id: loadingToast });
+        toast.success(t.backlog.cardCreated, { id: loadingToast });
         loadBacklog();
       } else {
         toast.error(result.error, { id: loadingToast });
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error('خطا در ایجاد کارت', { id: loadingToast });
+      toast.error(t.backlog.cardError, { id: loadingToast });
     } finally {
       setConverting(null);
     }
@@ -117,105 +120,120 @@ export default function BacklogPage() {
 
   const handleDelete = async (id: string) => {
     await supabase.from('backlog').delete().eq('id', id);
-    toast.success('کلمه حذف شد');
+    toast.success(t.backlog.wordDeleted);
     loadBacklog();
   };
 
   if (loading) {
     return (
-      <div>
+      <div className="min-h-screen bg-gray-50">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4">در حال بارگذاری...</div>
+        <div className="max-w-4xl mx-auto p-4 text-gray-600">{t.common.loading}</div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div className="min-h-screen bg-gray-50">
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
-        <div className="flex items-center justify-between flex-wrap gap-2">
-          <h1 className="text-2xl font-bold">Backlog</h1>
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <h1 className="text-2xl font-bold text-gray-900">{t.backlog.title}</h1>
           <div className="flex gap-2 flex-wrap">
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               onClick={() => setShowBatchDialog(true)}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 font-medium text-sm whitespace-nowrap"
             >
-              ✨ Batch Generate
-            </button>
-            <button
+              ✨ {t.backlog.batchGenerate}
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => setShowOCRDialog(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium text-sm whitespace-nowrap"
             >
-              📸 OCR Import
-            </button>
-            <button
+              📸 {t.backlog.ocrImport}
+            </Button>
+            <Button
+              variant="success"
+              size="sm"
               onClick={() => setShowCSVDialog(true)}
-              className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-medium text-sm whitespace-nowrap"
             >
-              📄 CSV Import
-            </button>
+              📄 {t.backlog.csvImport}
+            </Button>
           </div>
         </div>
 
         {/* Add form */}
-        <form onSubmit={handleAddToBacklog} className="flex gap-2">
-          <input
-            type="text"
-            value={newTerm}
-            onChange={(e) => setNewTerm(e.target.value)}
-            placeholder="Add a German term (e.g., der Bahnhof)"
-            className="flex-1 px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-base"
-          />
-          <button
-            type="submit"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium min-w-[80px]"
-          >
-            Add
-          </button>
-        </form>
+        <Card padding="md">
+          <form onSubmit={handleAddToBacklog} className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                value={newTerm}
+                onChange={(e) => setNewTerm(e.target.value)}
+                placeholder={t.backlog.inputPlaceholder}
+                inputSize="md"
+              />
+            </div>
+            <Button
+              type="submit"
+              variant="primary"
+              size="md"
+            >
+              {t.common.add}
+            </Button>
+          </form>
+        </Card>
 
         {/* Backlog list */}
         {backlog.length === 0 ? (
-          <div className="text-center py-12 text-gray-600">
-            No items in backlog. Add some terms above!
-          </div>
+          <Card padding="lg" className="text-center py-16">
+            <CardContent>
+              <div className="text-4xl mb-4">📝</div>
+              <p className="text-gray-600">
+                {t.backlog.emptyBacklog}
+              </p>
+            </CardContent>
+          </Card>
         ) : (
           <div className="space-y-3">
             {backlog.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white border rounded-lg p-4 flex items-center justify-between gap-3"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-lg truncate">{item.term}</div>
-                  <div className="text-sm text-gray-500">
-                    {new Date(item.created_at).toLocaleDateString()}
+              <Card key={item.id} padding="md">
+                <CardContent className="flex items-center justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-lg text-gray-900 truncate">{item.term}</div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(item.created_at).toLocaleDateString()}
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2 flex-wrap justify-end">
-                  <button
-                    onClick={() => handleConvertToCard(item, true)}
-                    disabled={converting === item.id}
-                    className="px-4 py-2 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 min-w-[90px]"
-                  >
-                    {converting === item.id ? '...' : 'AI Complete'}
-                  </button>
-                  <button
-                    onClick={() => handleConvertToCard(item, false)}
-                    disabled={converting === item.id}
-                    className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-w-[80px]"
-                  >
-                    Manual
-                  </button>
-                  <button
-                    onClick={() => handleDelete(item.id)}
-                    className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 min-w-[70px]"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+                  <div className="flex gap-2 flex-wrap justify-end">
+                    <Button
+                      variant="success"
+                      size="sm"
+                      onClick={() => handleConvertToCard(item, true)}
+                      disabled={converting === item.id}
+                      loading={converting === item.id}
+                    >
+                      {t.backlog.aiComplete}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleConvertToCard(item, false)}
+                      disabled={converting === item.id}
+                    >
+                      {t.backlog.manual}
+                    </Button>
+                    <Button
+                      variant="danger-soft"
+                      size="sm"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      {t.common.delete}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
