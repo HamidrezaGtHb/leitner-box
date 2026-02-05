@@ -240,106 +240,134 @@ export default function TodayPage() {
           </div>
         </div>
 
-        {/* Test Card */}
-        <div className="flex-1 flex items-center justify-center p-4">
-          <Card
-            variant={cardVariant}
-            padding="lg"
-            className="w-full max-w-lg min-h-[400px] flex flex-col shadow-lg"
+        {/* Test Card - Flip Animation */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div
+            className="w-full max-w-lg perspective-1000"
+            style={{ perspective: '1000px' }}
           >
-            {!showAnswer ? (
-              <CardContent className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
-                <div className="space-y-4">
-                  {article && <ArticleBadge article={article} size="lg" />}
-                  <div className="flex items-center justify-center gap-2">
-                    <div className="text-4xl md:text-5xl font-bold text-text">
-                      {currentCard.term}
+            <div
+              onClick={() => !showAnswer && setShowAnswer(true)}
+              className={`relative w-full min-h-[400px] transition-transform duration-500 cursor-pointer ${!showAnswer ? 'hover:scale-[1.02]' : ''}`}
+              style={{
+                transformStyle: 'preserve-3d',
+                transform: showAnswer ? 'rotateY(180deg)' : 'rotateY(0deg)'
+              }}
+            >
+              {/* Front of card */}
+              <Card
+                variant={cardVariant}
+                padding="lg"
+                className="absolute inset-0 w-full h-full flex flex-col shadow-lg backface-hidden"
+                style={{ backfaceVisibility: 'hidden' }}
+              >
+                <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
+                  <div className="space-y-4">
+                    {article && <ArticleBadge article={article} size="lg" />}
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="text-4xl md:text-5xl font-bold text-text">
+                        {currentCard.term}
+                      </div>
+                      <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
                     </div>
-                    <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
-                  </div>
-                  <div className="text-sm text-text-muted">
-                    {t.common.box} {currentCard.box}
-                  </div>
-                </div>
-                <Button
-                  variant="primary"
-                  size="xl"
-                  onClick={() => setShowAnswer(true)}
-                  className="px-12"
-                >
-                  {t.today.showAnswer}
-                </Button>
-              </CardContent>
-            ) : (
-              <CardContent className="flex-1 flex flex-col">
-                {/* Term */}
-                <div className="text-center pb-4 border-b mb-4">
-                  <div className="flex items-center justify-center gap-2 mb-2">
-                    {article && <ArticleBadge article={article} size="md" />}
-                    <span className="text-2xl font-bold text-text">{currentCard.term}</span>
-                    <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
-                  </div>
-                </div>
-
-                {/* Answer content */}
-                <div className="flex-1 space-y-4 overflow-y-auto">
-                  {/* Meanings */}
-                  <div>
-                    <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                      {t.today.meanings}
+                    <div className="text-sm text-text-muted">
+                      {t.common.box} {currentCard.box}
                     </div>
-                    <ul className="space-y-1">
-                      {currentCard.back_json.meaning_fa.map((meaning, i) => (
-                        <li key={i} className="text-text text-lg">{meaning}</li>
-                      ))}
-                    </ul>
+                  </div>
+                </CardContent>
+                {/* Hint at bottom */}
+                <div className="text-center pb-4 text-sm text-text-muted flex items-center justify-center gap-2">
+                  <span className="opacity-60">👆</span>
+                  برای دیدن پاسخ کلیک کنید
+                </div>
+              </Card>
+
+              {/* Back of card */}
+              <Card
+                variant={cardVariant}
+                padding="lg"
+                className="absolute inset-0 w-full h-full flex flex-col shadow-lg"
+                style={{
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateY(180deg)'
+                }}
+              >
+                <CardContent className="flex-1 flex flex-col overflow-hidden">
+                  {/* Term */}
+                  <div className="text-center pb-4 border-b mb-4 shrink-0">
+                    <div className="flex items-center justify-center gap-2 mb-2">
+                      {article && <ArticleBadge article={article} size="md" />}
+                      <span className="text-2xl font-bold text-text">{currentCard.term}</span>
+                      <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                    </div>
                   </div>
 
-                  {/* Examples */}
-                  {currentCard.back_json.examples.length > 0 && (
+                  {/* Answer content */}
+                  <div className="flex-1 space-y-4 overflow-y-auto">
+                    {/* Meanings */}
                     <div>
                       <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                        {t.today.examples}
+                        {t.today.meanings}
                       </div>
-                      {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
-                        <div key={i} className="mb-2 p-3 bg-surface-2 rounded-xl">
-                          <div className="text-text font-medium">{ex.de}</div>
-                          <div className="text-text-muted text-sm">{ex.fa}</div>
+                      <ul className="space-y-1">
+                        {currentCard.back_json.meaning_fa.map((meaning, i) => (
+                          <li key={i} className="text-text text-lg">{meaning}</li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    {/* Examples */}
+                    {currentCard.back_json.examples.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
+                          {t.today.examples}
                         </div>
-                      ))}
-                    </div>
-                  )}
+                        {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
+                          <div key={i} className="mb-2 p-3 bg-surface-2 rounded-xl">
+                            <div className="text-text font-medium">{ex.de}</div>
+                            <div className="text-text-muted text-sm">{ex.fa}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                  {/* Grammar */}
-                  {currentCard.back_json.grammar.noun?.plural && (
-                    <div className="text-sm text-text-muted">
-                      <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
-                    </div>
-                  )}
-                </div>
+                    {/* Grammar */}
+                    {currentCard.back_json.grammar.noun?.plural && (
+                      <div className="text-sm text-text-muted">
+                        <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                      </div>
+                    )}
+                  </div>
 
-                {/* Answer buttons */}
-                <div className="flex gap-3 pt-4 mt-4 border-t">
-                  <Button
-                    variant="danger"
-                    size="xl"
-                    className="flex-1"
-                    onClick={() => handleTestAnswer('wrong')}
-                  >
-                    ✗ {t.common.wrong}
-                  </Button>
-                  <Button
-                    variant="success"
-                    size="xl"
-                    className="flex-1"
-                    onClick={() => handleTestAnswer('correct')}
-                  >
-                    ✓ {t.common.correct}
-                  </Button>
-                </div>
-              </CardContent>
-            )}
-          </Card>
+                  {/* Answer buttons */}
+                  <div className="flex gap-3 pt-4 mt-4 border-t shrink-0">
+                    <Button
+                      variant="danger"
+                      size="xl"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTestAnswer('wrong');
+                      }}
+                    >
+                      ✗ {t.common.wrong}
+                    </Button>
+                    <Button
+                      variant="success"
+                      size="xl"
+                      className="flex-1"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleTestAnswer('correct');
+                      }}
+                    >
+                      ✓ {t.common.correct}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       </div>
     );
