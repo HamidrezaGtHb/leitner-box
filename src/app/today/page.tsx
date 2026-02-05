@@ -6,11 +6,9 @@ import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
-import { Button, Card, CardContent, ArticleBadge, BoxBadge, Badge } from '@/components/ui';
+import { Button, Card, CardContent, ArticleBadge, Badge } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
-
-type ViewMode = 'learning' | 'testing';
 
 const DEFAULT_SETTINGS: Settings = {
   user_id: 'default',
@@ -22,15 +20,20 @@ const DEFAULT_SETTINGS: Settings = {
 };
 
 export default function TodayPage() {
-  const [box1Cards, setBox1Cards] = useState<CardType[]>([]);
-  const [testCards, setTestCards] = useState<CardType[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [showAnswer, setShowAnswer] = useState(false);
+  const [learningCards, setLearningCards] = useState<CardType[]>([]);
+  const [reviewCards, setReviewCards] = useState<CardType[]>([]);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>('learning');
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  // Test mode state
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [testQueue, setTestQueue] = useState<CardType[]>([]);
+  const [currentTestIndex, setCurrentTestIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [testResults, setTestResults] = useState<{ correct: number; wrong: number }>({ correct: 0, wrong: 0 });
+
   const supabase = createClient();
   const { t } = useLanguage();
 
@@ -68,35 +71,40 @@ export default function TodayPage() {
       .select('*')
       .eq('user_id', user.id)
       .lte('due_date', today)
-      .order('due_date', { ascending: true });
+      .order('box', { ascending: true });
 
     if (error) {
       console.error('Error loading due cards:', error);
       toast.error(t.errors.loadingCards);
     } else {
       const allCards = data || [];
-      // Separate Box 1 (Learning) from Box 2+ (Testing)
+      // Box 1 = Learning, Box 2-5 = Review
       const learning = allCards.filter((c) => c.box === 1);
-      const testing = allCards.filter((c) => c.box > 1);
+      const review = allCards.filter((c) => c.box > 1);
 
-      setBox1Cards(learning);
-      // Apply daily limit to test cards
-      setTestCards(testing.slice(0, userSettings.daily_limit));
-
-      // If there are Box 1 cards, start in learning mode
-      // Otherwise, go to testing mode
-      if (learning.length > 0) {
-        setViewMode('learning');
-      } else if (testing.length > 0) {
-        setViewMode('testing');
-      }
+      setLearningCards(learning);
+      // Apply daily limit
+      setReviewCards(review.slice(0, userSettings.daily_limit));
     }
     setLoading(false);
   };
 
-  const handleAnswer = async (result: 'correct' | 'wrong') => {
-    const cards = viewMode === 'learning' ? box1Cards : testCards;
-    const card = cards[currentIndex];
+  const handleStartTest = () => {
+    // Combine learning and review cards for testing
+    const allDueCards = [...learningCards, ...reviewCards];
+    if (allDueCards.length === 0) {
+      toast.error(t.today.noCardsToday);
+      return;
+    }
+    setTestQueue(allDueCards);
+    setCurrentTestIndex(0);
+    setShowAnswer(false);
+    setTestResults({ correct: 0, wrong: 0 });
+    setIsTestMode(true);
+  };
+
+  const handleTestAnswer = async (result: 'correct' | 'wrong') => {
+    const card = testQueue[currentTestIndex];
     if (!card) return;
 
     const {
@@ -132,44 +140,37 @@ export default function TodayPage() {
       to_box: newBox,
     });
 
-    // Show feedback
+    // Update results
+    setTestResults(prev => ({
+      correct: prev.correct + (result === 'correct' ? 1 : 0),
+      wrong: prev.wrong + (result === 'wrong' ? 1 : 0),
+    }));
+
+    // Show brief feedback
     if (result === 'correct') {
-      toast.success(`${t.today.movedToBox} ${newBox}`);
+      toast.success(`${t.today.movedToBox} ${newBox}`, { duration: 1500 });
     } else {
-      toast.error(t.today.backToBox1);
+      toast.error(t.today.backToBox1, { duration: 1500 });
     }
 
-    // Move to next card or finish
+    // Move to next card
     setShowAnswer(false);
-
-    if (viewMode === 'learning') {
-      // Remove card from box1Cards
-      const remaining = box1Cards.filter((c) => c.id !== card.id);
-      setBox1Cards(remaining);
-
-      if (remaining.length === 0) {
-        // Box 1 done, check if there are test cards
-        if (testCards.length > 0) {
-          setViewMode('testing');
-          setCurrentIndex(0);
-          toast.success(t.today.learningDone);
-        } else {
-          setCelebrate(true);
-          toast.success(t.today.allReviewsComplete, { duration: 4000 });
-        }
-      } else {
-        setCurrentIndex(Math.min(currentIndex, remaining.length - 1));
-      }
+    if (currentTestIndex < testQueue.length - 1) {
+      setCurrentTestIndex(currentTestIndex + 1);
     } else {
-      // Testing mode
-      if (currentIndex < testCards.length - 1) {
-        setCurrentIndex(currentIndex + 1);
-      } else {
-        setTestCards([]);
-        setCurrentIndex(0);
-        setCelebrate(true);
-        toast.success(t.today.allReviewsComplete, { duration: 4000 });
-      }
+      // Test complete
+      setIsTestMode(false);
+      setCelebrate(true);
+      toast.success(t.today.allReviewsComplete, { duration: 4000 });
+      // Reload data to reflect changes
+      loadData();
+    }
+  };
+
+  const handleExitTest = () => {
+    if (confirm('Exit test? Progress will be saved.')) {
+      setIsTestMode(false);
+      loadData();
     }
   };
 
@@ -186,6 +187,8 @@ export default function TodayPage() {
     return 'default' as const;
   };
 
+  const totalDueCards = learningCards.length + reviewCards.length;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -197,407 +200,327 @@ export default function TodayPage() {
     );
   }
 
-  // No cards at all
-  if (box1Cards.length === 0 && testCards.length === 0) {
+  // TEST MODE - Full screen testing experience
+  if (isTestMode && testQueue.length > 0) {
+    const currentCard = testQueue[currentTestIndex];
+    const article = currentCard.back_json.grammar.noun?.article;
+    const cardVariant = getCardVariant(article);
+    const progress = ((currentTestIndex + 1) / testQueue.length) * 100;
+
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Nav />
-        <div className="max-w-4xl mx-auto p-4">
-          <Card padding="lg" className="text-center mt-20">
-            <CardContent className="space-y-4">
-              <div className="text-6xl mb-4">🎉</div>
-              <h1 className="text-2xl font-bold text-gray-900">{t.today.noCardsToday}</h1>
-              <p className="text-gray-600">
-                {t.today.allReviewsDone}
-              </p>
-              <p className="text-sm text-gray-500">
-                {t.today.comeBackTomorrow}
-              </p>
-            </CardContent>
-          </Card>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex flex-col">
+        {/* Test Header */}
+        <div className="bg-black/20 p-4">
+          <div className="max-w-2xl mx-auto">
+            <div className="flex items-center justify-between mb-3">
+              <button
+                onClick={handleExitTest}
+                className="text-white/60 hover:text-white text-sm flex items-center gap-1"
+              >
+                ← {t.today.exitTest}
+              </button>
+              <div className="text-white/80 text-sm font-medium">
+                {currentTestIndex + 1} / {testQueue.length}
+              </div>
+            </div>
+            {/* Progress bar */}
+            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          </div>
         </div>
-      </div>
-    );
-  }
 
-  // LEARNING MODE - Box 1
-  if (viewMode === 'learning' && box1Cards.length > 0) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Nav />
-        <Celebration trigger={celebrate} />
-        <div className="max-w-4xl mx-auto p-4">
-          {/* Header */}
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">{t.today.learningMode}</h1>
-              <p className="text-sm text-gray-600">
-                {t.today.learningDesc}
-              </p>
-            </div>
-            <div className="text-center p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
-              <div className="text-3xl font-bold text-blue-600">{box1Cards.length}</div>
-              <div className="text-sm text-gray-600">{t.today.card}</div>
-            </div>
-          </div>
-
-          {/* Mode Switch */}
-          <div className="mb-6 flex gap-3">
-            <Button
-              variant="primary"
-              size="lg"
-              className="flex-1"
-            >
-              📖 {t.today.learning} ({box1Cards.length})
-            </Button>
-            <Button
-              variant="secondary"
-              size="lg"
-              className="flex-1"
-              disabled={testCards.length === 0}
-              onClick={() => setViewMode('testing')}
-            >
-              📝 {t.today.testing} ({testCards.length})
-            </Button>
-          </div>
-
-          {/* Cards List */}
-          <div className="space-y-4">
-            {box1Cards.map((card) => {
-              const article = card.back_json.grammar.noun?.article;
-              const cardVariant = getCardVariant(article);
-              return (
-                <Card
-                  key={card.id}
-                  variant={cardVariant}
-                  className="overflow-hidden"
+        {/* Test Card */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <Card
+            variant={cardVariant}
+            padding="lg"
+            className="w-full max-w-lg min-h-[400px] flex flex-col shadow-2xl"
+          >
+            {!showAnswer ? (
+              <CardContent className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
+                <div className="space-y-4">
+                  {article && <ArticleBadge article={article} size="lg" />}
+                  <div className="text-4xl md:text-5xl font-bold text-gray-900">
+                    {currentCard.term}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {t.common.box} {currentCard.box}
+                  </div>
+                </div>
+                <Button
+                  variant="primary"
+                  size="xl"
+                  onClick={() => setShowAnswer(true)}
+                  className="px-12"
                 >
-                  {/* Card Header - Always visible */}
-                  <button
-                    onClick={() => toggleCardExpand(card.id)}
-                    className="w-full p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      {article && <ArticleBadge article={article} size="md" />}
-                      <span className="text-xl font-bold text-gray-900">{card.term}</span>
+                  {t.today.showAnswer}
+                </Button>
+              </CardContent>
+            ) : (
+              <CardContent className="flex-1 flex flex-col">
+                {/* Term */}
+                <div className="text-center pb-4 border-b mb-4">
+                  <div className="flex items-center justify-center gap-2 mb-2">
+                    {article && <ArticleBadge article={article} size="md" />}
+                    <span className="text-2xl font-bold text-gray-900">{currentCard.term}</span>
+                  </div>
+                </div>
+
+                {/* Answer content */}
+                <div className="flex-1 space-y-4 overflow-y-auto">
+                  {/* Meanings */}
+                  <div>
+                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      {t.today.meanings}
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full font-medium">
-                        {t.common.box} 1
-                      </span>
-                      <span className="text-gray-400 text-lg">
-                        {expandedCard === card.id ? '▲' : '▼'}
-                      </span>
+                    <ul className="space-y-1">
+                      {currentCard.back_json.meaning_fa.map((meaning, i) => (
+                        <li key={i} className="text-gray-800 text-lg">{meaning}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Examples */}
+                  {currentCard.back_json.examples.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                        {t.today.examples}
+                      </div>
+                      {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
+                        <div key={i} className="mb-2 p-3 bg-gray-50 rounded-lg">
+                          <div className="text-gray-800 font-medium">{ex.de}</div>
+                          <div className="text-gray-600 text-sm">{ex.fa}</div>
+                        </div>
+                      ))}
                     </div>
-                  </button>
-
-                  {/* Card Details - Expandable */}
-                  {expandedCard === card.id && (
-                    <CardContent className="border-t bg-gray-50 space-y-4">
-                      {/* Meanings */}
-                      <div>
-                        <div className="text-sm font-semibold text-gray-700 mb-2">
-                          {t.today.meanings}
-                        </div>
-                        <ul className="list-disc list-inside space-y-1">
-                          {card.back_json.meaning_fa.map((meaning, i) => (
-                            <li key={i} className="text-gray-800">{meaning}</li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      {/* Examples */}
-                      {card.back_json.examples.length > 0 && (
-                        <div>
-                          <div className="text-sm font-semibold text-gray-700 mb-2">
-                            {t.today.examples}
-                          </div>
-                          {card.back_json.examples.map((ex, i) => (
-                            <Card key={i} padding="sm" className="mb-2">
-                              <div className="text-gray-800 font-medium">{ex.de}</div>
-                              <div className="text-gray-600 text-sm">{ex.fa}</div>
-                            </Card>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Grammar */}
-                      {card.back_json.grammar.noun && (
-                        <div className="flex items-center gap-3 text-sm">
-                          <ArticleBadge article={card.back_json.grammar.noun.article} size="sm" />
-                          {card.back_json.grammar.noun.plural && (
-                            <span className="text-gray-600">
-                              <strong>{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {card.back_json.grammar.verb && (
-                        <div className="text-sm space-y-1 text-gray-700">
-                          {card.back_json.grammar.verb.perfekt_aux && (
-                            <div><strong>Perfekt:</strong> {card.back_json.grammar.verb.perfekt_aux} + {card.back_json.grammar.verb.partizip2}</div>
-                          )}
-                          {card.back_json.grammar.verb.praeteritum && (
-                            <div><strong>Präteritum:</strong> {card.back_json.grammar.verb.praeteritum}</div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Collocations */}
-                      {card.back_json.collocations.length > 0 && (
-                        <div>
-                          <div className="text-sm font-semibold text-gray-700 mb-2">
-                            {t.today.collocations}
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {card.back_json.collocations.map((col, i) => (
-                              <Badge key={i} variant="warning" size="sm">
-                                {col}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Learning Tips */}
-                      {card.back_json.learning_tips.length > 0 && (
-                        <div>
-                          <div className="text-sm font-semibold text-gray-700 mb-2">
-                            {t.today.learningTips}
-                          </div>
-                          <ul className="text-sm text-gray-600 space-y-1">
-                            {card.back_json.learning_tips.map((tip, i) => (
-                              <li key={i}>💡 {tip}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Test Button */}
-                      <div className="pt-4 border-t">
-                        <Button
-                          variant="success"
-                          size="lg"
-                          className="w-full"
-                          onClick={() => {
-                            setCurrentIndex(box1Cards.findIndex(c => c.id === card.id));
-                            setShowAnswer(true);
-                            setExpandedCard(null);
-                          }}
-                        >
-                          ✓ {t.today.iLearned}
-                        </Button>
-                      </div>
-                    </CardContent>
                   )}
-                </Card>
-              );
-            })}
-          </div>
 
-          {/* Test Modal for Box 1 */}
-          {showAnswer && box1Cards[currentIndex] && (
-            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-              <Card padding="lg" className="max-w-md w-full">
-                <CardContent className="space-y-4">
-                  <h2 className="text-xl font-bold text-center text-gray-900">{t.today.test}</h2>
-                  <p className="text-center text-gray-600">
-                    {t.today.testQuestion}
-                  </p>
-                  <div className="text-3xl font-bold text-center py-4 text-gray-900">
-                    {box1Cards[currentIndex].term}
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="danger"
-                      size="lg"
-                      className="flex-1"
-                      onClick={() => handleAnswer('wrong')}
-                    >
-                      {t.today.iDontKnow}
-                    </Button>
-                    <Button
-                      variant="success"
-                      size="lg"
-                      className="flex-1"
-                      onClick={() => handleAnswer('correct')}
-                    >
-                      {t.today.iKnow}
-                    </Button>
-                  </div>
+                  {/* Grammar */}
+                  {currentCard.back_json.grammar.noun?.plural && (
+                    <div className="text-sm text-gray-600">
+                      <strong>{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                    </div>
+                  )}
+                </div>
+
+                {/* Answer buttons */}
+                <div className="flex gap-3 pt-4 mt-4 border-t">
                   <Button
-                    variant="ghost"
-                    size="md"
-                    className="w-full"
-                    onClick={() => setShowAnswer(false)}
+                    variant="danger"
+                    size="xl"
+                    className="flex-1"
+                    onClick={() => handleTestAnswer('wrong')}
                   >
-                    {t.common.cancel}
+                    ✗ {t.common.wrong}
                   </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // TESTING MODE - Box 2+
-  const currentCard = testCards[currentIndex];
-
-  if (!currentCard) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Nav />
-        <Celebration trigger={celebrate} />
-        <div className="max-w-4xl mx-auto p-4">
-          <Card padding="lg" className="text-center mt-20">
-            <CardContent className="space-y-4">
-              <div className="text-6xl mb-4">🎉</div>
-              <h1 className="text-2xl font-bold text-gray-900">{t.today.testFinished}</h1>
-              <p className="text-gray-600">{t.today.reviewedAllCards}</p>
-            </CardContent>
+                  <Button
+                    variant="success"
+                    size="xl"
+                    className="flex-1"
+                    onClick={() => handleTestAnswer('correct')}
+                  >
+                    ✓ {t.common.correct}
+                  </Button>
+                </div>
+              </CardContent>
+            )}
           </Card>
         </div>
       </div>
     );
   }
 
-  const currentArticle = currentCard.back_json.grammar.noun?.article;
-  const currentCardVariant = getCardVariant(currentArticle);
-
+  // MAIN VIEW - Show all cards
   return (
     <div className="min-h-screen bg-gray-50">
       <Nav />
       <Celebration trigger={celebrate} />
-      <div className="max-w-2xl mx-auto p-4">
-        {/* Mode Switch */}
-        {box1Cards.length > 0 && (
-          <div className="mb-6 flex gap-3">
-            <Button
-              variant="secondary"
-              size="lg"
-              className="flex-1"
-              onClick={() => setViewMode('learning')}
-            >
-              📖 {t.today.learning} ({box1Cards.length})
-            </Button>
+
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
+        {/* Header with Start Test button */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">{t.today.title}</h1>
+            <p className="text-gray-600 text-sm">
+              {totalDueCards > 0
+                ? `${totalDueCards} ${t.common.cards} ${t.today.dueForReview.toLowerCase()}`
+                : t.today.allReviewsDone}
+            </p>
+          </div>
+
+          {totalDueCards > 0 && (
             <Button
               variant="primary"
               size="lg"
-              className="flex-1"
+              onClick={handleStartTest}
+              className="sm:px-8"
             >
-              📝 {t.today.testing} ({testCards.length})
+              ▶ {t.today.startTest} ({totalDueCards})
             </Button>
+          )}
+        </div>
+
+        {/* No cards message */}
+        {totalDueCards === 0 && (
+          <Card padding="lg" className="text-center">
+            <CardContent className="py-12 space-y-4">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-xl font-bold text-gray-900">{t.today.noCardsToday}</h2>
+              <p className="text-gray-600">{t.today.comeBackTomorrow}</p>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Learning Cards (Box 1) */}
+        {learningCards.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center text-amber-600 text-sm font-bold">1</span>
+                {t.today.newWords}
+              </h2>
+              <Badge variant="warning" size="md">{learningCards.length} {t.common.cards}</Badge>
+            </div>
+
+            <div className="grid gap-3">
+              {learningCards.map((card) => {
+                const article = card.back_json.grammar.noun?.article;
+                const cardVariant = getCardVariant(article);
+                const isExpanded = expandedCard === card.id;
+
+                return (
+                  <Card key={card.id} variant={cardVariant} className="overflow-hidden">
+                    {/* Card header - clickable */}
+                    <button
+                      onClick={() => toggleCardExpand(card.id)}
+                      className="w-full p-4 flex items-center justify-between hover:bg-black/5 transition-colors text-left"
+                    >
+                      <div className="flex items-center gap-3">
+                        {article && <ArticleBadge article={article} size="md" />}
+                        <span className="text-lg font-semibold text-gray-900">{card.term}</span>
+                      </div>
+                      <span className="text-gray-400 text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
+                        ▼
+                      </span>
+                    </button>
+
+                    {/* Expanded content */}
+                    {isExpanded && (
+                      <CardContent className="border-t bg-gray-50/50 space-y-4">
+                        {/* Meanings */}
+                        <div>
+                          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                            {t.today.meanings}
+                          </div>
+                          <ul className="space-y-1">
+                            {card.back_json.meaning_fa.map((meaning, i) => (
+                              <li key={i} className="text-gray-800">• {meaning}</li>
+                            ))}
+                          </ul>
+                        </div>
+
+                        {/* Examples */}
+                        {card.back_json.examples.length > 0 && (
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              {t.today.examples}
+                            </div>
+                            {card.back_json.examples.slice(0, 2).map((ex, i) => (
+                              <Card key={i} padding="sm" className="mb-2">
+                                <div className="text-gray-800 font-medium">{ex.de}</div>
+                                <div className="text-gray-600 text-sm">{ex.fa}</div>
+                              </Card>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Grammar */}
+                        {card.back_json.grammar.noun?.plural && (
+                          <div className="text-sm text-gray-600">
+                            <strong>{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
+                          </div>
+                        )}
+
+                        {/* Collocations */}
+                        {card.back_json.collocations.length > 0 && (
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              {t.today.collocations}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {card.back_json.collocations.map((col, i) => (
+                                <Badge key={i} variant="default" size="sm">{col}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Learning Tips */}
+                        {card.back_json.learning_tips.length > 0 && (
+                          <div>
+                            <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                              {t.today.learningTips}
+                            </div>
+                            <ul className="text-sm text-gray-600 space-y-1">
+                              {card.back_json.learning_tips.map((tip, i) => (
+                                <li key={i}>💡 {tip}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        <div className="mb-4 flex items-center justify-between">
-          <div className="text-sm text-gray-600">
-            {t.today.card} {currentIndex + 1} / {testCards.length}
-          </div>
-          <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full font-medium">
-            {t.common.box} {currentCard.box}
-          </span>
-        </div>
+        {/* Review Cards (Box 2-5) */}
+        {reviewCards.length > 0 && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <span className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center text-blue-600 text-sm font-bold">2-5</span>
+                {t.today.dueForReview}
+              </h2>
+              <Badge variant="info" size="md">{reviewCards.length} {t.common.cards}</Badge>
+            </div>
 
-        {/* Progress bar */}
-        <div className="mb-6 h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gray-900 transition-all duration-300"
-            style={{
-              width: `${((currentIndex + 1) / testCards.length) * 100}%`,
-            }}
-          />
-        </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+              {reviewCards.map((card) => {
+                const article = card.back_json.grammar.noun?.article;
+                const cardVariant = getCardVariant(article);
 
-        {/* Card */}
-        <Card variant={currentCardVariant} padding="lg" className="min-h-[400px] flex flex-col items-center justify-center shadow-lg">
-          {!showAnswer ? (
-            <CardContent className="text-center space-y-6 w-full">
-              <div className="text-4xl font-bold text-gray-900">{currentCard.term}</div>
-              <Button
-                variant="primary"
-                size="xl"
-                onClick={() => setShowAnswer(true)}
-              >
-                {t.today.showAnswer}
-              </Button>
-            </CardContent>
-          ) : (
-            <CardContent className="w-full space-y-6">
-              <div className="text-3xl font-bold text-center text-gray-900">
-                {currentCard.term}
-              </div>
-
-              <div className="border-t pt-6 space-y-4">
-                {/* Meanings */}
-                <div>
-                  <div className="text-sm font-semibold text-gray-700 mb-2">
-                    {t.today.meanings}
-                  </div>
-                  <ul className="list-disc list-inside space-y-1">
-                    {currentCard.back_json.meaning_fa.map((meaning, i) => (
-                      <li key={i} className="text-gray-800">
-                        {meaning}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Examples */}
-                {currentCard.back_json.examples.length > 0 && (
-                  <div>
-                    <div className="text-sm font-semibold text-gray-700 mb-2">
-                      {t.today.examples}
-                    </div>
-                    {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
-                      <div key={i} className="mb-2 text-sm">
-                        <div className="text-gray-800">{ex.de}</div>
-                        <div className="text-gray-600">
-                          {ex.fa}
+                return (
+                  <Card key={card.id} variant={cardVariant} padding="md" className="text-center">
+                    <CardContent className="space-y-2">
+                      {article && (
+                        <div className="flex justify-center">
+                          <ArticleBadge article={article} size="sm" />
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                      )}
+                      <div className="font-semibold text-gray-900 truncate">{card.term}</div>
+                      <div className="text-xs text-gray-500">{t.common.box} {card.box}</div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
-                {/* Grammar */}
-                {currentCard.back_json.grammar.noun && (
-                  <div className="flex items-center gap-3 text-sm">
-                    <ArticleBadge article={currentCard.back_json.grammar.noun.article} size="sm" />
-                    {currentCard.back_json.grammar.noun.plural && (
-                      <span className="text-gray-600">
-                        <strong>{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Answer buttons */}
-              <div className="flex gap-3 mt-8">
-                <Button
-                  variant="danger"
-                  size="xl"
-                  className="flex-1"
-                  onClick={() => handleAnswer('wrong')}
-                >
-                  {t.common.wrong}
-                </Button>
-                <Button
-                  variant="success"
-                  size="xl"
-                  className="flex-1"
-                  onClick={() => handleAnswer('correct')}
-                >
-                  {t.common.correct}
-                </Button>
-              </div>
-            </CardContent>
-          )}
-        </Card>
+        {/* Daily limit info */}
+        {reviewCards.length >= settings.daily_limit && (
+          <div className="text-center text-sm text-gray-500 py-2">
+            {t.settings.dailyLimit}: {settings.daily_limit} {t.common.cards}
+          </div>
+        )}
       </div>
     </div>
   );

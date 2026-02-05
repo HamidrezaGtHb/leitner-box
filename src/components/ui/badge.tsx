@@ -124,7 +124,7 @@ const BoxBadge = forwardRef<HTMLSpanElement, BoxBadgeProps>(
         className={className}
         {...props}
       >
-        باکس {box}
+        Box {box}
       </Badge>
     );
   }

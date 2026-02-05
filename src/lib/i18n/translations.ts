@@ -2,6 +2,11 @@ export type Language = 'en' | 'de';
 
 export const translations = {
   en: {
+    // App
+    app: {
+      name: 'My Leitner',
+    },
+
     // Navigation
     nav: {
       today: 'Today',
@@ -50,6 +55,7 @@ export const translations = {
 
     // Today page
     today: {
+      title: "Today's Review",
       learningMode: 'Learning Mode',
       testingMode: 'Testing Mode',
       learningDesc: 'Box 1 - Click on any card to see details',
@@ -68,14 +74,30 @@ export const translations = {
       comeBackTomorrow: 'Come back tomorrow or add new cards from Backlog.',
       testFinished: 'Test finished!',
       reviewedAllCards: 'You reviewed all cards for today.',
-      meanings: 'Meanings:',
-      examples: 'Examples:',
-      collocations: 'Common collocations:',
-      learningTips: 'Learning tips:',
+      meanings: 'Meanings',
+      examples: 'Examples',
+      collocations: 'Collocations',
+      learningTips: 'Learning tips',
       movedToBox: 'Great! Moved to Box',
       backToBox1: 'Back to Box 1',
       learningDone: 'Learning done! Now testing other boxes',
       allReviewsComplete: 'All reviews for today are complete!',
+      startTest: 'Start Test',
+      learnFirst: 'Learn First',
+      newWords: 'New Words',
+      dueForReview: 'Due for Review',
+      todayProgress: "Today's Progress",
+      cardsReviewed: 'Cards Reviewed',
+      locked: 'Locked',
+      availableOn: 'Available on',
+      box1Learning: 'Box 1 - Learning',
+      box2to5Review: 'Box 2-5 - Review',
+      tapToLearn: 'Tap a card to start learning',
+      testAll: 'Test All',
+      continueTest: 'Continue Test',
+      cardsRemaining: 'cards remaining',
+      exitTest: 'Exit Test',
+      testProgress: 'Test Progress',
     },
 
     // Cards page
@@ -151,6 +173,9 @@ export const translations = {
       settingsSaved: 'Settings saved',
       settingsError: 'Error saving settings',
       pleaseLogin: 'Please login',
+      account: 'Account',
+      accountDesc: 'Manage your account',
+      logoutConfirm: 'Are you sure you want to logout?',
     },
 
     // Errors
@@ -162,6 +187,11 @@ export const translations = {
   },
 
   de: {
+    // App
+    app: {
+      name: 'Mein Leitner',
+    },
+
     // Navigation
     nav: {
       today: 'Heute',
@@ -210,6 +240,7 @@ export const translations = {
 
     // Today page
     today: {
+      title: 'Heutige Wiederholung',
       learningMode: 'Lernmodus',
       testingMode: 'Testmodus',
       learningDesc: 'Box 1 - Klicken Sie auf eine Karte, um Details zu sehen',
@@ -228,14 +259,30 @@ export const translations = {
       comeBackTomorrow: 'Kommen Sie morgen wieder oder fügen Sie neue Karten aus der Warteliste hinzu.',
       testFinished: 'Test beendet!',
       reviewedAllCards: 'Sie haben alle Karten für heute überprüft.',
-      meanings: 'Bedeutungen:',
-      examples: 'Beispiele:',
-      collocations: 'Häufige Kollokationen:',
-      learningTips: 'Lerntipps:',
+      meanings: 'Bedeutungen',
+      examples: 'Beispiele',
+      collocations: 'Kollokationen',
+      learningTips: 'Lerntipps',
       movedToBox: 'Toll! In Box verschoben',
       backToBox1: 'Zurück zu Box 1',
       learningDone: 'Lernen abgeschlossen! Jetzt andere Boxen testen',
       allReviewsComplete: 'Alle Wiederholungen für heute sind abgeschlossen!',
+      startTest: 'Test starten',
+      learnFirst: 'Zuerst lernen',
+      newWords: 'Neue Wörter',
+      dueForReview: 'Zur Wiederholung',
+      todayProgress: 'Heutiger Fortschritt',
+      cardsReviewed: 'Karten überprüft',
+      locked: 'Gesperrt',
+      availableOn: 'Verfügbar am',
+      box1Learning: 'Box 1 - Lernen',
+      box2to5Review: 'Box 2-5 - Wiederholung',
+      tapToLearn: 'Tippen Sie auf eine Karte zum Lernen',
+      testAll: 'Alle testen',
+      continueTest: 'Test fortsetzen',
+      cardsRemaining: 'Karten übrig',
+      exitTest: 'Test beenden',
+      testProgress: 'Testfortschritt',
     },
 
     // Cards page
@@ -311,6 +358,9 @@ export const translations = {
       settingsSaved: 'Einstellungen gespeichert',
       settingsError: 'Fehler beim Speichern der Einstellungen',
       pleaseLogin: 'Bitte anmelden',
+      account: 'Konto',
+      accountDesc: 'Verwalten Sie Ihr Konto',
+      logoutConfirm: 'Sind Sie sicher, dass Sie sich abmelden möchten?',
     },
 
     // Errors

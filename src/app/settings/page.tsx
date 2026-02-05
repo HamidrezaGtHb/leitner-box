@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Settings } from '@/types';
+import { DEV_MODE } from '@/lib/dev-auth';
 import {
   calculateStreak,
   calculateAccuracy,
@@ -35,8 +37,20 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const router = useRouter();
   const supabase = createClient();
   const { language, setLanguage, t } = useLanguage();
+
+  const handleSignOut = async () => {
+    if (!confirm(t.settings.logoutConfirm)) return;
+
+    if (DEV_MODE) {
+      router.push('/login');
+      return;
+    }
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
 
   useEffect(() => {
     loadSettings();
@@ -321,6 +335,25 @@ export default function SettingsPage() {
                 <li key={index}>• {item}</li>
               ))}
             </ul>
+          </CardContent>
+        </Card>
+
+        {/* Account Card */}
+        <Card padding="lg">
+          <CardHeader>
+            <CardTitle>{t.settings.account}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-gray-500">
+              {t.settings.accountDesc}
+            </p>
+            <Button
+              variant="danger"
+              size="md"
+              onClick={handleSignOut}
+            >
+              {t.nav.logout}
+            </Button>
           </CardContent>
         </Card>
       </div>
