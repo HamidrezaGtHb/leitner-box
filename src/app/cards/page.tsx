@@ -6,7 +6,8 @@ import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
 import { EditCardDialog } from '@/components/edit-card-dialog';
 import { formatDate } from '@/lib/utils';
-import { Button, Card, CardHeader, CardTitle, CardContent, ArticleBadge } from '@/components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, ArticleBadge, CopyButton } from '@/components/ui';
+import { CardDetailModal } from '@/components/card-detail-modal';
 import { useLanguage } from '@/lib/i18n';
 import {
   calculateStreak,
@@ -29,6 +30,8 @@ export default function CardsPage() {
   const [filterBox, setFilterBox] = useState<number>(1);
   const [loading, setLoading] = useState(true);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalIndex, setModalIndex] = useState(0);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
   const [stats, setStats] = useState({
     totalCards: 0,
@@ -87,20 +90,6 @@ export default function CardsPage() {
     setLoading(false);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t.cards.deleteConfirm)) return;
-
-    const deleteToast = toast.loading(t.cards.deleting);
-    const { error } = await supabase.from('cards').delete().eq('id', id);
-
-    if (error) {
-      toast.error(t.cards.deleteError, { id: deleteToast });
-    } else {
-      toast.success(t.cards.deleted, { id: deleteToast });
-      loadData();
-    }
-  };
-
   const today = formatDate(new Date());
 
   const isCardHidden = (card: CardType): boolean => {
@@ -119,6 +108,34 @@ export default function CardsPage() {
   };
 
   const filteredCards = cards.filter((card) => card.box === filterBox);
+  const visibleCards = filteredCards.filter(c => !isCardHidden(c));
+
+  const openCardModal = (card: CardType) => {
+    const visibleIndex = visibleCards.findIndex(c => c.id === card.id);
+    if (visibleIndex !== -1) {
+      setModalIndex(visibleIndex);
+      setModalOpen(true);
+    }
+  };
+
+  const handleEditFromModal = (card: CardType) => {
+    setEditingCard(card);
+  };
+
+  const handleDeleteFromModal = async (card: CardType) => {
+    if (!confirm(t.cards.deleteConfirm)) return;
+
+    const deleteToast = toast.loading(t.cards.deleting);
+    const { error } = await supabase.from('cards').delete().eq('id', card.id);
+
+    if (error) {
+      toast.error(t.cards.deleteError, { id: deleteToast });
+    } else {
+      toast.success(t.cards.deleted, { id: deleteToast });
+      loadData();
+    }
+  };
+
   const boxCounts = [1, 2, 3, 4, 5].map((box) => ({
     box,
     count: cards.filter((c) => c.box === box).length,
@@ -126,15 +143,15 @@ export default function CardsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-bg">
         <Nav />
-        <div className="max-w-6xl mx-auto p-4 text-gray-600">{t.common.loading}</div>
+        <div className="max-w-6xl mx-auto p-4 text-text-muted">{t.common.loading}</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-bg">
       <Nav />
       <div className="max-w-6xl mx-auto p-4 space-y-6">
         {/* Stats Summary */}
@@ -232,12 +249,12 @@ export default function CardsPage() {
           <Card padding="lg" className="text-center py-16">
             <CardContent>
               <div className="text-4xl mb-4">📭</div>
-              <p className="text-gray-500">{t.cards.noCardsInBox} {filterBox}</p>
+              <p className="text-text-muted">{t.cards.noCardsInBox} {filterBox}</p>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredCards.map((card) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {filteredCards.map((card, index) => {
               const hidden = isCardHidden(card);
               const article = card.back_json.grammar.noun?.article;
               const cardVariant = getCardVariant(article);
@@ -247,65 +264,36 @@ export default function CardsPage() {
                   key={card.id}
                   variant={cardVariant}
                   padding="md"
-                  className={hidden ? 'opacity-50' : ''}
+                  className={`cursor-pointer hover:shadow-lg transition-shadow ${hidden ? 'opacity-50' : ''}`}
+                  onClick={() => !hidden && openCardModal(card)}
                 >
-                  <CardContent className="space-y-3">
+                  <CardContent className="space-y-2">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
                         {hidden ? (
-                          <span className="text-gray-400 text-lg">🔒 {t.cards.hidden}</span>
+                          <span className="text-text-muted text-lg">🔒 {t.cards.hidden}</span>
                         ) : (
-                          <div className="flex items-center gap-2 flex-wrap">
+                          <div className="flex items-center gap-2">
                             {article && <ArticleBadge article={article} size="sm" />}
-                            <span className="font-semibold text-lg text-gray-900">{card.term}</span>
+                            <span className="font-semibold text-lg text-text">{card.term}</span>
+                            <CopyButton text={article ? `${article} ${card.term}` : card.term} size="sm" />
                           </div>
                         )}
                       </div>
-                      <span className="text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full font-medium">
-                        {t.common.box} {card.box}
-                      </span>
                     </div>
 
                     {hidden ? (
-                      <div className="text-sm text-gray-500 py-6 text-center">
+                      <div className="text-sm text-text-muted py-4 text-center">
                         <div>📅 {t.common.review}: {card.due_date}</div>
                         <div className="text-xs mt-1">{t.cards.hiddenForReview}</div>
                       </div>
                     ) : (
                       <>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          {card.back_json.meaning_fa.slice(0, 2).map((m, i) => (
-                            <div key={i} className="truncate">• {m}</div>
-                          ))}
+                        <div className="text-sm text-text-muted line-clamp-2">
+                          {card.back_json.meaning_fa[0]}
                         </div>
-
-                        {card.back_json.grammar.noun?.plural && (
-                          <div className="text-xs text-gray-500">
-                            {t.common.plural}: <span className="font-medium">{card.back_json.grammar.noun.plural}</span>
-                          </div>
-                        )}
-
-                        <div className="text-xs text-gray-400">
-                          {t.common.review}: {card.due_date}
-                        </div>
-
-                        <div className="flex gap-2 pt-2">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => setEditingCard(card)}
-                          >
-                            {t.common.edit}
-                          </Button>
-                          <Button
-                            variant="danger-soft"
-                            size="sm"
-                            className="flex-1"
-                            onClick={() => handleDelete(card.id)}
-                          >
-                            {t.common.delete}
-                          </Button>
+                        <div className="text-xs text-text-muted">
+                          📅 {card.due_date}
                         </div>
                       </>
                     )}
@@ -315,6 +303,17 @@ export default function CardsPage() {
             })}
           </div>
         )}
+
+        {/* Card Detail Modal */}
+        <CardDetailModal
+          cards={visibleCards}
+          currentIndex={modalIndex}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          onNavigate={setModalIndex}
+          onEdit={handleEditFromModal}
+          onDelete={handleDeleteFromModal}
+        />
 
         {editingCard && (
           <EditCardDialog

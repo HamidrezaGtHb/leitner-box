@@ -7,6 +7,7 @@ import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
 import { Button, Card, CardContent, ArticleBadge, Badge, CopyButton } from '@/components/ui';
+import { CardDetailModal } from '@/components/card-detail-modal';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
@@ -25,7 +26,11 @@ export default function TodayPage() {
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [expandedCard, setExpandedCard] = useState<string | null>(null);
+
+  // Card detail modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalCards, setModalCards] = useState<CardType[]>([]);
+  const [modalIndex, setModalIndex] = useState(0);
 
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
@@ -174,8 +179,10 @@ export default function TodayPage() {
     }
   };
 
-  const toggleCardExpand = (cardId: string) => {
-    setExpandedCard(expandedCard === cardId ? null : cardId);
+  const openCardModal = (cards: CardType[], index: number) => {
+    setModalCards(cards);
+    setModalIndex(index);
+    setModalOpen(true);
   };
 
   const getCardVariant = (article: string | null | undefined) => {
@@ -390,100 +397,30 @@ export default function TodayPage() {
               <Badge variant="warning" size="md">{learningCards.length} {t.common.cards}</Badge>
             </div>
 
-            <div className="grid gap-4">
-              {learningCards.map((card) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {learningCards.map((card, index) => {
                 const article = card.back_json.grammar.noun?.article;
                 const cardVariant = getCardVariant(article);
-                const isExpanded = expandedCard === card.id;
 
                 return (
-                  <Card key={card.id} variant={cardVariant} padding="none" className="overflow-hidden">
-                    {/* Card header - clickable */}
-                    <div className="flex items-center">
-                      <button
-                        onClick={() => toggleCardExpand(card.id)}
-                        className="flex-1 p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
-                      >
-                        <div className="flex items-center gap-3">
-                          {article && <ArticleBadge article={article} size="md" />}
-                          <span className="text-lg font-semibold text-text">{card.term}</span>
+                  <Card
+                    key={card.id}
+                    variant={cardVariant}
+                    padding="md"
+                    className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+                    onClick={() => openCardModal(learningCards, index)}
+                  >
+                    <CardContent className="text-center space-y-2">
+                      {article && (
+                        <div className="flex justify-center">
+                          <ArticleBadge article={article} size="sm" />
                         </div>
-                        <span className="text-text-muted text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
-                          ▼
-                        </span>
-                      </button>
-                      <CopyButton
-                        text={article ? `${article} ${card.term}` : card.term}
-                        className="mr-2"
-                      />
-                    </div>
-
-                    {/* Expanded content */}
-                    {isExpanded && (
-                      <CardContent className="border-t bg-surface-2/50 p-4 space-y-4">
-                        {/* Meanings */}
-                        <div>
-                          <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                            {t.today.meanings}
-                          </div>
-                          <ul className="space-y-1">
-                            {card.back_json.meaning_fa.map((meaning, i) => (
-                              <li key={i} className="text-text">• {meaning}</li>
-                            ))}
-                          </ul>
-                        </div>
-
-                        {/* Examples */}
-                        {card.back_json.examples.length > 0 && (
-                          <div>
-                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                              {t.today.examples}
-                            </div>
-                            {card.back_json.examples.slice(0, 2).map((ex, i) => (
-                              <div key={i} className="mb-2 p-3 bg-surface rounded-xl border">
-                                <div className="text-text font-medium">{ex.de}</div>
-                                <div className="text-text-muted text-sm">{ex.fa}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Grammar */}
-                        {card.back_json.grammar.noun?.plural && (
-                          <div className="text-sm text-text-muted">
-                            <strong className="text-text">{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
-                          </div>
-                        )}
-
-                        {/* Collocations */}
-                        {card.back_json.collocations.length > 0 && (
-                          <div>
-                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                              {t.today.collocations}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {card.back_json.collocations.map((col, i) => (
-                                <Badge key={i} variant="default" size="sm">{col}</Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Learning Tips */}
-                        {card.back_json.learning_tips.length > 0 && (
-                          <div>
-                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                              {t.today.learningTips}
-                            </div>
-                            <ul className="text-sm text-text-muted space-y-1">
-                              {card.back_json.learning_tips.map((tip, i) => (
-                                <li key={i}>💡 {tip}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </CardContent>
-                    )}
+                      )}
+                      <div className="font-semibold text-text truncate">{card.term}</div>
+                      <div className="text-xs text-text-muted truncate">
+                        {card.back_json.meaning_fa[0]}
+                      </div>
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -502,21 +439,31 @@ export default function TodayPage() {
               <Badge variant="info" size="md">{reviewCards.length} {t.common.cards}</Badge>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-              {reviewCards.map((card) => {
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {reviewCards.map((card, index) => {
                 const article = card.back_json.grammar.noun?.article;
                 const cardVariant = getCardVariant(article);
 
                 return (
-                  <Card key={card.id} variant={cardVariant} padding="md" className="text-center">
-                    <CardContent className="space-y-2">
+                  <Card
+                    key={card.id}
+                    variant={cardVariant}
+                    padding="md"
+                    className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+                    onClick={() => openCardModal(reviewCards, index)}
+                  >
+                    <CardContent className="text-center space-y-2">
                       {article && (
                         <div className="flex justify-center">
                           <ArticleBadge article={article} size="sm" />
                         </div>
                       )}
                       <div className="font-semibold text-text truncate">{card.term}</div>
-                      <div className="text-xs text-text-muted">{t.common.box} {card.box}</div>
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-xs bg-info/15 text-info px-2 py-0.5 rounded-full font-medium">
+                          {t.common.box} {card.box}
+                        </span>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -531,6 +478,15 @@ export default function TodayPage() {
             {t.settings.dailyLimit}: {settings.daily_limit} {t.common.cards}
           </div>
         )}
+
+        {/* Card Detail Modal */}
+        <CardDetailModal
+          cards={modalCards}
+          currentIndex={modalIndex}
+          open={modalOpen}
+          onOpenChange={setModalOpen}
+          onNavigate={setModalIndex}
+        />
       </div>
     </div>
   );
