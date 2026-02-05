@@ -3,27 +3,27 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
-  'bg-white dark:bg-gray-800 rounded-xl transition-all duration-200',
+  'rounded-2xl border bg-surface shadow-sm transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'border border-gray-200 dark:border-gray-700',
-        elevated: 'shadow-md hover:shadow-lg dark:shadow-gray-900/30',
-        outline: 'border-2 border-gray-200 dark:border-gray-600',
-        ghost: 'bg-gray-50 dark:bg-gray-800/50',
-        // Article variants
-        der: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-sky-400 dark:border-l-sky-500',
-        die: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-rose-400 dark:border-l-rose-500',
-        das: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-emerald-400 dark:border-l-emerald-500',
+        default: '',
+        elevated: 'shadow-md hover:shadow-lg',
+        outline: 'border-2',
+        ghost: 'bg-surface-2 border-transparent shadow-none',
+        // Article variants with colored left border
+        der: 'border-l-4 border-l-der',
+        die: 'border-l-4 border-l-die',
+        das: 'border-l-4 border-l-das',
       },
       padding: {
         none: 'p-0',
         sm: 'p-3',
-        md: 'p-5',
+        md: 'p-4',
         lg: 'p-6',
       },
       hover: {
-        true: 'hover:shadow-md dark:hover:shadow-gray-900/40 cursor-pointer',
+        true: 'hover:shadow-md cursor-pointer',
         false: '',
       },
     },
@@ -56,7 +56,7 @@ Card.displayName = 'Card';
 // Card Header
 const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('pb-4', className)} {...props} />
+    <div ref={ref} className={cn('pb-4 border-b border-border mb-4', className)} {...props} />
   )
 );
 CardHeader.displayName = 'CardHeader';
@@ -64,7 +64,7 @@ CardHeader.displayName = 'CardHeader';
 // Card Title
 const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-lg font-semibold text-gray-900 dark:text-white', className)} {...props} />
+    <h3 ref={ref} className={cn('text-base font-semibold text-text tracking-tight', className)} {...props} />
   )
 );
 CardTitle.displayName = 'CardTitle';
@@ -72,7 +72,7 @@ CardTitle.displayName = 'CardTitle';
 // Card Description
 const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-sm text-gray-500 dark:text-gray-400 mt-1', className)} {...props} />
+    <p ref={ref} className={cn('text-sm text-text-muted mt-1', className)} {...props} />
   )
 );
 CardDescription.displayName = 'CardDescription';
@@ -88,7 +88,7 @@ CardContent.displayName = 'CardContent';
 // Card Footer
 const CardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('pt-4 flex gap-2', className)} {...props} />
+    <div ref={ref} className={cn('pt-4 flex gap-2 border-t border-border mt-4', className)} {...props} />
   )
 );
 CardFooter.displayName = 'CardFooter';

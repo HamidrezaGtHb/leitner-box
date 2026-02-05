@@ -3,30 +3,30 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  // Base styles
-  'inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900',
+  // Base styles with focus ring using tokens
+  'inline-flex items-center justify-center font-medium transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-bg',
   {
     variants: {
       variant: {
-        primary: 'bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-800 dark:hover:bg-gray-100 focus:ring-gray-900 dark:focus:ring-white',
-        secondary: 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-600 focus:ring-gray-500',
-        success: 'bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500',
-        danger: 'bg-rose-600 text-white hover:bg-rose-700 focus:ring-rose-500',
-        'danger-soft': 'bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 focus:ring-rose-500',
-        warning: 'bg-amber-500 text-white hover:bg-amber-600 focus:ring-amber-500',
-        ghost: 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:ring-gray-500',
-        outline: 'border-2 border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 focus:ring-gray-500',
-        // Article colors (solid colors work well in both modes)
-        der: 'bg-sky-500 text-white hover:bg-sky-600 focus:ring-sky-500',
-        die: 'bg-rose-500 text-white hover:bg-rose-600 focus:ring-rose-500',
-        das: 'bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500',
+        primary: 'bg-accent text-accent-fg shadow-sm hover:opacity-90 active:opacity-85',
+        secondary: 'bg-surface-2 text-text border hover:bg-muted',
+        success: 'bg-success text-success-fg shadow-sm hover:opacity-90',
+        danger: 'bg-danger text-danger-fg shadow-sm hover:opacity-90',
+        'danger-soft': 'bg-danger/10 text-danger hover:bg-danger/20',
+        warning: 'bg-warning text-warning-fg shadow-sm hover:opacity-90',
+        ghost: 'text-text hover:bg-muted',
+        outline: 'border-2 text-text hover:bg-surface-2',
+        // Article colors (solid colors)
+        der: 'bg-der text-white shadow-sm hover:opacity-90',
+        die: 'bg-die text-white shadow-sm hover:opacity-90',
+        das: 'bg-das text-white shadow-sm hover:opacity-90',
       },
       size: {
-        xs: 'text-xs px-2 py-1 rounded',
+        xs: 'text-xs px-2 py-1 rounded-md',
         sm: 'text-sm px-3 py-1.5 rounded-lg',
-        md: 'text-sm px-4 py-2.5 rounded-lg',
+        md: 'text-sm px-4 py-2.5 rounded-xl',
         lg: 'text-base px-6 py-3 rounded-xl',
-        xl: 'text-lg px-8 py-4 rounded-xl',
+        xl: 'text-lg px-8 py-4 rounded-2xl',
       },
       fullWidth: {
         true: 'w-full',

@@ -4,55 +4,105 @@
 
 @layer base {
   :root {
-    --background: 0 0% 98%;
-    --foreground: 0 0% 9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
-    --accent: 0 0% 96%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 90%;
-    --input: 0 0% 90%;
-    --ring: 0 0% 9%;
-    --radius: 0.5rem;
+    /* Typography */
+    --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+
+    /* Light theme (neutral, minimal, premium) */
+    --bg: 210 20% 98%;
+    --surface: 0 0% 100%;
+    --surface2: 210 20% 96%;
+    --muted: 210 16% 93%;
+    --border: 214 18% 86%;
+
+    --text: 222 22% 12%;
+    --text-muted: 215 14% 40%;
+
+    /* Accent: calm blue */
+    --accent: 221 83% 53%;
+    --accent-fg: 210 40% 98%;
+
+    /* Semantic colors */
+    --success: 142 71% 45%;
+    --success-fg: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-fg: 0 0% 100%;
+    --danger: 0 84% 60%;
+    --danger-fg: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-fg: 0 0% 100%;
+
+    /* German article colors */
+    --der: 199 89% 48%;
+    --die: 350 89% 60%;
+    --das: 142 71% 45%;
+
+    /* Focus ring */
+    --ring: 221 83% 53%;
+
+    /* Shadow */
+    --shadow-color: 222 40% 12%;
+
+    /* Radius */
+    --radius: 0.75rem;
   }
 
   .dark {
-    --background: 0 0% 7%;
-    --foreground: 0 0% 95%;
-    --card: 0 0% 12%;
-    --card-foreground: 0 0% 95%;
-    --popover: 0 0% 12%;
-    --popover-foreground: 0 0% 95%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 20%;
-    --secondary-foreground: 0 0% 95%;
-    --muted: 0 0% 20%;
-    --muted-foreground: 0 0% 60%;
-    --accent: 0 0% 20%;
-    --accent-foreground: 0 0% 95%;
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 20%;
-    --input: 0 0% 20%;
-    --ring: 0 0% 80%;
+    /* Dark theme (premium slate, not pure black) */
+    --bg: 222 22% 8%;
+    --surface: 222 22% 11%;
+    --surface2: 223 18% 15%;
+    --muted: 223 16% 20%;
+    --border: 223 14% 24%;
+
+    --text: 210 40% 96%;
+    --text-muted: 215 16% 65%;
+
+    /* Accent stays similar but slightly brighter */
+    --accent: 217 91% 60%;
+    --accent-fg: 222 22% 10%;
+
+    /* Semantic colors (slightly brighter for dark) */
+    --success: 142 71% 50%;
+    --success-fg: 0 0% 100%;
+    --warning: 38 92% 55%;
+    --warning-fg: 0 0% 100%;
+    --danger: 0 84% 65%;
+    --danger-fg: 0 0% 100%;
+    --info: 199 89% 55%;
+    --info-fg: 0 0% 100%;
+
+    /* German article colors (brighter for dark) */
+    --der: 199 89% 55%;
+    --die: 350 89% 65%;
+    --das: 142 71% 50%;
+
+    --ring: 217 91% 60%;
+
+    --shadow-color: 0 0% 0%;
   }
 
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
+  }
+
+  html {
+    font-family: var(--font-sans);
   }
 
   body {
-    @apply bg-background text-foreground transition-colors duration-200;
+    background-color: hsl(var(--bg));
+    color: hsl(var(--text));
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+}
+
+/* Custom scrollbar for webkit browsers */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

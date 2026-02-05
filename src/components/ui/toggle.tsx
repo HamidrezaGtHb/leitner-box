@@ -5,13 +5,13 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const toggleVariants = cva(
-  'relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-gray-900 disabled:cursor-not-allowed disabled:opacity-50',
+  'relative inline-flex shrink-0 cursor-pointer rounded-full transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-bg disabled:cursor-not-allowed disabled:opacity-50',
   {
     variants: {
       variant: {
-        default: 'focus:ring-gray-900 dark:focus:ring-white',
-        success: 'focus:ring-emerald-500',
-        primary: 'focus:ring-blue-500',
+        default: '',
+        success: 'focus:ring-success',
+        primary: 'focus:ring-accent',
       },
       size: {
         sm: 'h-5 w-9',
@@ -67,23 +67,23 @@ const Toggle = forwardRef<HTMLButtonElement, ToggleProps>(
 
     const bgColor = checked
       ? variant === 'success'
-        ? 'bg-emerald-600'
+        ? 'bg-success'
         : variant === 'primary'
-        ? 'bg-blue-600'
-        : 'bg-gray-900 dark:bg-white'
-      : 'bg-gray-300 dark:bg-gray-600';
+        ? 'bg-accent'
+        : 'bg-accent'
+      : 'bg-muted';
 
     if (label || description) {
       return (
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1">
             {label && (
-              <span className="block text-sm font-medium text-gray-700 dark:text-gray-200">
+              <span className="block text-sm font-medium text-text">
                 {label}
               </span>
             )}
             {description && (
-              <span className="block text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+              <span className="block text-sm text-text-muted mt-0.5">
                 {description}
               </span>
             )}

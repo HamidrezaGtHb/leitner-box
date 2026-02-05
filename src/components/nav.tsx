@@ -19,15 +19,15 @@ export function Nav() {
   const isActive = (path: string) => pathname === path;
 
   return (
-    <nav className="sticky top-0 z-40 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg">
-      <div className="max-w-6xl mx-auto px-4">
+    <nav className="sticky top-0 z-40 border-b bg-surface/80 backdrop-blur-lg">
+      <div className="max-w-5xl mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link
             href="/today"
-            className="flex items-center gap-2 font-bold text-xl text-gray-900 dark:text-white hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            className="flex items-center gap-2 font-bold text-xl text-text hover:opacity-80 transition-opacity"
           >
-            <CalendarIcon size={28} className="text-gray-900 dark:text-white" />
+            <CalendarIcon size={28} className="text-text" />
             <span className="hidden sm:inline font-semibold">40Tagen</span>
           </Link>
 
@@ -38,10 +38,10 @@ export function Nav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                  'px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200',
                   isActive(item.href)
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-accent text-accent-fg shadow-sm'
+                    : 'text-text-muted hover:bg-muted hover:text-text'
                 )}
               >
                 <span className="mr-1.5">{item.icon}</span>
@@ -50,14 +50,14 @@ export function Nav() {
             ))}
 
             {/* Settings Icon (separate) */}
-            <div className="ml-2 pl-2 border-l border-gray-200 dark:border-gray-700">
+            <div className="ml-2 pl-2 border-l">
               <Link
                 href="/settings"
                 className={cn(
-                  'p-2 rounded-lg transition-all duration-200 flex items-center justify-center',
+                  'p-2 rounded-xl transition-all duration-200 flex items-center justify-center',
                   isActive('/settings')
-                    ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white'
+                    ? 'bg-accent text-accent-fg'
+                    : 'text-text-muted hover:bg-muted hover:text-text'
                 )}
                 aria-label={t.nav.settings}
               >
@@ -74,10 +74,10 @@ export function Nav() {
               key={item.href}
               href={item.href}
               className={cn(
-                'flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all',
+                'flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all',
                 isActive(item.href)
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  ? 'bg-accent text-accent-fg shadow-sm'
+                  : 'bg-surface-2 text-text-muted'
               )}
             >
               <span>{item.icon}</span>
@@ -86,14 +86,14 @@ export function Nav() {
           ))}
 
           {/* Settings Icon (separate) */}
-          <div className="ml-auto pl-2 border-l border-gray-200 dark:border-gray-700">
+          <div className="ml-auto pl-2 border-l">
             <Link
               href="/settings"
               className={cn(
-                'flex items-center justify-center p-2 rounded-lg transition-all',
+                'flex items-center justify-center p-2 rounded-xl transition-all',
                 isActive('/settings')
-                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
-                  : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400'
+                  ? 'bg-accent text-accent-fg'
+                  : 'bg-surface-2 text-text-muted'
               )}
               aria-label={t.nav.settings}
             >

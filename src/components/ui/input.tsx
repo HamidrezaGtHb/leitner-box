@@ -3,14 +3,14 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const inputVariants = cva(
-  'w-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-gray-400 dark:placeholder:text-gray-500 text-gray-900 dark:text-white',
+  'w-full transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-0',
   {
     variants: {
       variant: {
-        default: 'border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 focus:border-gray-900 dark:focus:border-gray-400 focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-gray-400/20',
-        filled: 'border-0 bg-gray-100 dark:bg-gray-700 focus:bg-gray-50 dark:focus:bg-gray-600 focus:ring-2 focus:ring-gray-900/10 dark:focus:ring-gray-400/20',
-        outline: 'border-2 border-gray-200 dark:border-gray-600 bg-transparent focus:border-gray-900 dark:focus:border-gray-400',
-        ghost: 'border-0 bg-transparent focus:bg-gray-50 dark:focus:bg-gray-800',
+        default: 'border bg-surface focus:border-transparent',
+        filled: 'border-0 bg-surface-2 focus:bg-muted',
+        outline: 'border-2 bg-transparent focus:border-accent',
+        ghost: 'border-0 bg-transparent focus:bg-surface-2',
       },
       inputSize: {
         sm: 'text-sm px-3 py-2 rounded-lg',
@@ -18,7 +18,7 @@ const inputVariants = cva(
         lg: 'text-lg px-5 py-4 rounded-xl',
       },
       error: {
-        true: 'border-rose-500 focus:border-rose-500 focus:ring-rose-500/10',
+        true: 'border-danger focus:ring-danger',
         false: '',
       },
     },
@@ -45,7 +45,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+          <label className="block text-sm font-medium text-text mb-1.5">
             {label}
           </label>
         )}
@@ -53,7 +53,6 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
           ref={ref}
           className={cn(
             inputVariants({ variant, inputSize, error: hasError }),
-            'focus:outline-none',
             className
           )}
           {...props}
@@ -61,7 +60,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {(helperText || errorMessage) && (
           <p className={cn(
             'mt-1.5 text-sm',
-            hasError ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'
+            hasError ? 'text-danger' : 'text-text-muted'
           )}>
             {errorMessage || helperText}
           </p>
@@ -89,7 +88,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1.5">
+          <label className="block text-sm font-medium text-text mb-1.5">
             {label}
           </label>
         )}
@@ -97,7 +96,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           ref={ref}
           className={cn(
             inputVariants({ variant, inputSize, error: hasError }),
-            'focus:outline-none min-h-[100px] resize-y',
+            'min-h-[100px] resize-y',
             className
           )}
           {...props}
@@ -105,7 +104,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {(helperText || errorMessage) && (
           <p className={cn(
             'mt-1.5 text-sm',
-            hasError ? 'text-rose-600 dark:text-rose-400' : 'text-gray-500 dark:text-gray-400'
+            hasError ? 'text-danger' : 'text-text-muted'
           )}>
             {errorMessage || helperText}
           </p>

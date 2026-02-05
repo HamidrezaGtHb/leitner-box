@@ -191,9 +191,9 @@ export default function TodayPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+      <div className="min-h-screen bg-bg">
         <Nav />
-        <div className="max-w-4xl mx-auto p-4 text-center mt-20 text-gray-600 dark:text-gray-400">
+        <div className="max-w-5xl mx-auto p-4 text-center mt-20 text-text-muted">
           {t.common.loading}
         </div>
       </div>
@@ -208,25 +208,25 @@ export default function TodayPage() {
     const progress = ((currentTestIndex + 1) / testQueue.length) * 100;
 
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-gray-800 flex flex-col">
+      <div className="min-h-screen bg-surface-2 flex flex-col">
         {/* Test Header */}
-        <div className="bg-black/20 p-4">
+        <div className="bg-surface border-b p-4">
           <div className="max-w-2xl mx-auto">
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={handleExitTest}
-                className="text-white/60 hover:text-white text-sm flex items-center gap-1"
+                className="text-text-muted hover:text-text text-sm flex items-center gap-1 transition-colors"
               >
                 ← {t.today.exitTest}
               </button>
-              <div className="text-white/80 text-sm font-medium">
+              <div className="text-text text-sm font-medium">
                 {currentTestIndex + 1} / {testQueue.length}
               </div>
             </div>
             {/* Progress bar */}
-            <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
               <div
-                className="h-full bg-emerald-500 transition-all duration-300"
+                className="h-full bg-success transition-all duration-300"
                 style={{ width: `${progress}%` }}
               />
             </div>
@@ -238,16 +238,16 @@ export default function TodayPage() {
           <Card
             variant={cardVariant}
             padding="lg"
-            className="w-full max-w-lg min-h-[400px] flex flex-col shadow-2xl"
+            className="w-full max-w-lg min-h-[400px] flex flex-col shadow-lg"
           >
             {!showAnswer ? (
               <CardContent className="flex-1 flex flex-col items-center justify-center text-center space-y-8">
                 <div className="space-y-4">
                   {article && <ArticleBadge article={article} size="lg" />}
-                  <div className="text-4xl md:text-5xl font-bold text-gray-900">
+                  <div className="text-4xl md:text-5xl font-bold text-text">
                     {currentCard.term}
                   </div>
-                  <div className="text-sm text-gray-500">
+                  <div className="text-sm text-text-muted">
                     {t.common.box} {currentCard.box}
                   </div>
                 </div>
@@ -266,7 +266,7 @@ export default function TodayPage() {
                 <div className="text-center pb-4 border-b mb-4">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     {article && <ArticleBadge article={article} size="md" />}
-                    <span className="text-2xl font-bold text-gray-900">{currentCard.term}</span>
+                    <span className="text-2xl font-bold text-text">{currentCard.term}</span>
                   </div>
                 </div>
 
@@ -274,12 +274,12 @@ export default function TodayPage() {
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {/* Meanings */}
                   <div>
-                    <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                    <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                       {t.today.meanings}
                     </div>
                     <ul className="space-y-1">
                       {currentCard.back_json.meaning_fa.map((meaning, i) => (
-                        <li key={i} className="text-gray-800 text-lg">{meaning}</li>
+                        <li key={i} className="text-text text-lg">{meaning}</li>
                       ))}
                     </ul>
                   </div>
@@ -287,13 +287,13 @@ export default function TodayPage() {
                   {/* Examples */}
                   {currentCard.back_json.examples.length > 0 && (
                     <div>
-                      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                         {t.today.examples}
                       </div>
                       {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
-                        <div key={i} className="mb-2 p-3 bg-gray-50 rounded-lg">
-                          <div className="text-gray-800 font-medium">{ex.de}</div>
-                          <div className="text-gray-600 text-sm">{ex.fa}</div>
+                        <div key={i} className="mb-2 p-3 bg-surface-2 rounded-xl">
+                          <div className="text-text font-medium">{ex.de}</div>
+                          <div className="text-text-muted text-sm">{ex.fa}</div>
                         </div>
                       ))}
                     </div>
@@ -301,8 +301,8 @@ export default function TodayPage() {
 
                   {/* Grammar */}
                   {currentCard.back_json.grammar.noun?.plural && (
-                    <div className="text-sm text-gray-600">
-                      <strong>{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                    <div className="text-sm text-text-muted">
+                      <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
                     </div>
                   )}
                 </div>
@@ -336,16 +336,16 @@ export default function TodayPage() {
 
   // MAIN VIEW - Show all cards
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+    <div className="min-h-screen bg-bg">
       <Nav />
       <Celebration trigger={celebrate} />
 
-      <div className="max-w-4xl mx-auto p-4 space-y-6">
+      <div className="max-w-5xl mx-auto p-4 py-6 space-y-6">
         {/* Header with Start Test button */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t.today.title}</h1>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
+            <h1 className="text-2xl font-semibold text-text tracking-tight">{t.today.title}</h1>
+            <p className="text-text-muted text-sm">
               {totalDueCards > 0
                 ? `${totalDueCards} ${t.common.cards} ${t.today.dueForReview.toLowerCase()}`
                 : t.today.allReviewsDone}
@@ -366,11 +366,11 @@ export default function TodayPage() {
 
         {/* No cards message */}
         {totalDueCards === 0 && (
-          <Card padding="lg" className="text-center dark:bg-gray-800 dark:border-gray-700">
+          <Card padding="lg" className="text-center">
             <CardContent className="py-12 space-y-4">
               <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.today.noCardsToday}</h2>
-              <p className="text-gray-600 dark:text-gray-400">{t.today.comeBackTomorrow}</p>
+              <h2 className="text-xl font-semibold text-text">{t.today.noCardsToday}</h2>
+              <p className="text-text-muted">{t.today.comeBackTomorrow}</p>
             </CardContent>
           </Card>
         )}
@@ -379,46 +379,46 @@ export default function TodayPage() {
         {learningCards.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span className="w-8 h-8 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex items-center justify-center text-amber-600 dark:text-amber-400 text-sm font-bold">1</span>
+              <h2 className="text-lg font-semibold text-text flex items-center gap-2">
+                <span className="w-8 h-8 bg-warning/15 rounded-xl flex items-center justify-center text-warning text-sm font-bold">1</span>
                 {t.today.newWords}
               </h2>
               <Badge variant="warning" size="md">{learningCards.length} {t.common.cards}</Badge>
             </div>
 
-            <div className="grid gap-3">
+            <div className="grid gap-4">
               {learningCards.map((card) => {
                 const article = card.back_json.grammar.noun?.article;
                 const cardVariant = getCardVariant(article);
                 const isExpanded = expandedCard === card.id;
 
                 return (
-                  <Card key={card.id} variant={cardVariant} className="overflow-hidden">
+                  <Card key={card.id} variant={cardVariant} padding="none" className="overflow-hidden">
                     {/* Card header - clickable */}
                     <button
                       onClick={() => toggleCardExpand(card.id)}
-                      className="w-full p-4 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition-colors text-left"
+                      className="w-full p-4 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
                     >
                       <div className="flex items-center gap-3">
                         {article && <ArticleBadge article={article} size="md" />}
-                        <span className="text-lg font-semibold text-gray-900 dark:text-white">{card.term}</span>
+                        <span className="text-lg font-semibold text-text">{card.term}</span>
                       </div>
-                      <span className="text-gray-400 dark:text-gray-500 text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
+                      <span className="text-text-muted text-lg transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(180deg)' : '' }}>
                         ▼
                       </span>
                     </button>
 
                     {/* Expanded content */}
                     {isExpanded && (
-                      <CardContent className="border-t dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 space-y-4">
+                      <CardContent className="border-t bg-surface-2/50 p-4 space-y-4">
                         {/* Meanings */}
                         <div>
-                          <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                          <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                             {t.today.meanings}
                           </div>
                           <ul className="space-y-1">
                             {card.back_json.meaning_fa.map((meaning, i) => (
-                              <li key={i} className="text-gray-800 dark:text-gray-200">• {meaning}</li>
+                              <li key={i} className="text-text">• {meaning}</li>
                             ))}
                           </ul>
                         </div>
@@ -426,29 +426,29 @@ export default function TodayPage() {
                         {/* Examples */}
                         {card.back_json.examples.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                               {t.today.examples}
                             </div>
                             {card.back_json.examples.slice(0, 2).map((ex, i) => (
-                              <Card key={i} padding="sm" className="mb-2 dark:bg-gray-700 dark:border-gray-600">
-                                <div className="text-gray-800 dark:text-gray-200 font-medium">{ex.de}</div>
-                                <div className="text-gray-600 dark:text-gray-400 text-sm">{ex.fa}</div>
-                              </Card>
+                              <div key={i} className="mb-2 p-3 bg-surface rounded-xl border">
+                                <div className="text-text font-medium">{ex.de}</div>
+                                <div className="text-text-muted text-sm">{ex.fa}</div>
+                              </div>
                             ))}
                           </div>
                         )}
 
                         {/* Grammar */}
                         {card.back_json.grammar.noun?.plural && (
-                          <div className="text-sm text-gray-600 dark:text-gray-400">
-                            <strong>{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
+                          <div className="text-sm text-text-muted">
+                            <strong className="text-text">{t.common.plural}:</strong> {card.back_json.grammar.noun.plural}
                           </div>
                         )}
 
                         {/* Collocations */}
                         {card.back_json.collocations.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                               {t.today.collocations}
                             </div>
                             <div className="flex flex-wrap gap-2">
@@ -462,10 +462,10 @@ export default function TodayPage() {
                         {/* Learning Tips */}
                         {card.back_json.learning_tips.length > 0 && (
                           <div>
-                            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
                               {t.today.learningTips}
                             </div>
-                            <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
+                            <ul className="text-sm text-text-muted space-y-1">
                               {card.back_json.learning_tips.map((tip, i) => (
                                 <li key={i}>💡 {tip}</li>
                               ))}
@@ -485,14 +485,14 @@ export default function TodayPage() {
         {reviewCards.length > 0 && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                <span className="w-8 h-8 bg-blue-100 dark:bg-blue-900/30 rounded-lg flex items-center justify-center text-blue-600 dark:text-blue-400 text-sm font-bold">2-5</span>
+              <h2 className="text-lg font-semibold text-text flex items-center gap-2">
+                <span className="w-8 h-8 bg-info/15 rounded-xl flex items-center justify-center text-info text-sm font-bold">2-5</span>
                 {t.today.dueForReview}
               </h2>
               <Badge variant="info" size="md">{reviewCards.length} {t.common.cards}</Badge>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
               {reviewCards.map((card) => {
                 const article = card.back_json.grammar.noun?.article;
                 const cardVariant = getCardVariant(article);
@@ -505,8 +505,8 @@ export default function TodayPage() {
                           <ArticleBadge article={article} size="sm" />
                         </div>
                       )}
-                      <div className="font-semibold text-gray-900 dark:text-white truncate">{card.term}</div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">{t.common.box} {card.box}</div>
+                      <div className="font-semibold text-text truncate">{card.term}</div>
+                      <div className="text-xs text-text-muted">{t.common.box} {card.box}</div>
                     </CardContent>
                   </Card>
                 );
@@ -517,7 +517,7 @@ export default function TodayPage() {
 
         {/* Daily limit info */}
         {reviewCards.length >= settings.daily_limit && (
-          <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-2">
+          <div className="text-center text-sm text-text-muted py-2">
             {t.settings.dailyLimit}: {settings.daily_limit} {t.common.cards}
           </div>
         )}
