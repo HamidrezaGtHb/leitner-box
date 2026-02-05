@@ -3,18 +3,18 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const cardVariants = cva(
-  'bg-white rounded-xl transition-all duration-200',
+  'bg-white dark:bg-gray-800 rounded-xl transition-all duration-200',
   {
     variants: {
       variant: {
-        default: 'border border-gray-100',
-        elevated: 'shadow-md hover:shadow-lg',
-        outline: 'border-2 border-gray-200',
-        ghost: 'bg-gray-50',
+        default: 'border border-gray-200 dark:border-gray-700',
+        elevated: 'shadow-md hover:shadow-lg dark:shadow-gray-900/30',
+        outline: 'border-2 border-gray-200 dark:border-gray-600',
+        ghost: 'bg-gray-50 dark:bg-gray-800/50',
         // Article variants
-        der: 'border border-gray-100 border-l-4 border-l-sky-400',
-        die: 'border border-gray-100 border-l-4 border-l-rose-400',
-        das: 'border border-gray-100 border-l-4 border-l-emerald-400',
+        der: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-sky-400 dark:border-l-sky-500',
+        die: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-rose-400 dark:border-l-rose-500',
+        das: 'border border-gray-200 dark:border-gray-700 border-l-4 border-l-emerald-400 dark:border-l-emerald-500',
       },
       padding: {
         none: 'p-0',
@@ -23,7 +23,7 @@ const cardVariants = cva(
         lg: 'p-6',
       },
       hover: {
-        true: 'hover:shadow-md cursor-pointer',
+        true: 'hover:shadow-md dark:hover:shadow-gray-900/40 cursor-pointer',
         false: '',
       },
     },
@@ -64,7 +64,7 @@ CardHeader.displayName = 'CardHeader';
 // Card Title
 const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    <h3 ref={ref} className={cn('text-lg font-semibold text-gray-900', className)} {...props} />
+    <h3 ref={ref} className={cn('text-lg font-semibold text-gray-900 dark:text-white', className)} {...props} />
   )
 );
 CardTitle.displayName = 'CardTitle';
@@ -72,7 +72,7 @@ CardTitle.displayName = 'CardTitle';
 // Card Description
 const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
-    <p ref={ref} className={cn('text-sm text-gray-500 mt-1', className)} {...props} />
+    <p ref={ref} className={cn('text-sm text-gray-500 dark:text-gray-400 mt-1', className)} {...props} />
   )
 );
 CardDescription.displayName = 'CardDescription';
