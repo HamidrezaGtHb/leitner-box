@@ -322,4 +322,13 @@ export const translations = {
   },
 } as const;
 
-export type Translations = typeof translations.en;
+// Helper type to convert literal types to string while preserving readonly
+type DeepStringify<T> = T extends string
+  ? string
+  : T extends readonly string[]
+  ? readonly string[]
+  : T extends object
+  ? { readonly [K in keyof T]: DeepStringify<T[K]> }
+  : T;
+
+export type Translations = DeepStringify<typeof translations.en>;
