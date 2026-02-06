@@ -6,6 +6,7 @@ import {
   batchGenerateTermsAction,
   addTermToBacklogAction,
 } from '@/app/actions/ai-actions';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -26,12 +27,13 @@ export function BatchGenerateDialog({
   const [count, setCount] = useState(5);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
+  const { t } = useLanguage();
 
   const handleGenerate = async () => {
     setGenerating(true);
     setProgress({ current: 0, total: count });
 
-    const loadingToast = toast.loading('در حال تولید کلمات...');
+    const loadingToast = toast.loading(t.dialogs.generatingWords);
 
     try {
       const result = await batchGenerateTermsAction(
@@ -63,14 +65,14 @@ export function BatchGenerateDialog({
         }
       }
 
-      toast.success(`${addedCount} کلمه به Backlog اضافه شد`, {
+      toast.success(`${addedCount} ${t.dialogs.wordsAddedToBacklog}`, {
         id: loadingToast,
       });
       onSuccess();
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error('خطا در تولید کلمات', { id: loadingToast });
+      toast.error(t.dialogs.errorGenerating, { id: loadingToast });
     } finally {
       setGenerating(false);
       setProgress({ current: 0, total: 0 });

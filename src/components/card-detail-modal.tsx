@@ -266,17 +266,17 @@ export function CardDetailModal({
                     disabled={!hasPrev}
                     className="px-4 py-2 rounded-xl bg-surface-2 text-text disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   >
-                    ← قبلی
+                    ←
                   </button>
                   <span className="text-sm text-text-muted">
-                    Swipe برای جابجایی
+                    {t.dialogs.swipeToNavigate}
                   </span>
                   <button
                     onClick={() => hasNext && onNavigate(currentIndex + 1)}
                     disabled={!hasNext}
                     className="px-4 py-2 rounded-xl bg-surface-2 text-text disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                   >
-                    بعدی →
+                    →
                   </button>
                 </div>
               </div>

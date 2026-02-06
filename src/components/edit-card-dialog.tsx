@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Card, CardBackJSON } from '@/types';
 import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -25,6 +26,7 @@ export function EditCardDialog({
   );
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   const handleSave = async () => {
     setSaving(true);
@@ -58,16 +60,16 @@ export function EditCardDialog({
         .eq('id', card.id);
 
       if (error) {
-        toast.error('خطا در ذخیره تغییرات');
+        toast.error(t.dialogs.saveError);
         console.error(error);
       } else {
-        toast.success('تغییرات ذخیره شد');
+        toast.success(t.dialogs.saveSuccess);
         onSuccess();
         onOpenChange(false);
       }
     } catch (error) {
       console.error(error);
-      toast.error('خطا در ذخیره تغییرات');
+      toast.error(t.dialogs.saveError);
     } finally {
       setSaving(false);
     }
@@ -79,46 +81,45 @@ export function EditCardDialog({
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
         <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto z-50">
           <Dialog.Title className="text-2xl font-bold mb-4">
-            Edit Card: {card.term}
+            {t.dialogs.editCard}: {card.term}
           </Dialog.Title>
 
           <div className="space-y-4">
             {/* Meanings */}
             <div>
-              <label className="block text-sm font-medium mb-2" dir="rtl">
-                Meanings (Persian) - هر معنی در یک خط
+              <label className="block text-sm font-medium mb-2">
+                {t.dialogs.meaningsLabel}
               </label>
               <textarea
                 value={meanings}
                 onChange={(e) => setMeanings(e.target.value)}
                 rows={5}
                 className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-                dir="rtl"
-                placeholder="معنی اول&#10;معنی دوم"
+                placeholder={t.dialogs.meaningPlaceholder}
               />
             </div>
 
             {/* Examples */}
             <div>
               <label className="block text-sm font-medium mb-2">
-                Examples - Format: German|Persian (one per line)
+                {t.dialogs.examplesLabel}
               </label>
               <textarea
                 value={examples}
                 onChange={(e) => setExamples(e.target.value)}
                 rows={6}
                 className="w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                placeholder="Ich gehe zur Schule|من به مدرسه می‌روم&#10;Das ist gut|این خوب است"
+                placeholder="Ich gehe zur Schule|I go to school"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Use | (pipe) to separate German and Persian
+                {t.dialogs.examplesHint}
               </p>
             </div>
 
             {/* Grammar info (read-only for simplicity) */}
             {card.back_json.grammar.noun && (
               <div className="p-3 bg-gray-50 rounded text-sm">
-                <strong>Grammar:</strong> {card.back_json.grammar.noun.article}
+                <strong>{t.dialogs.grammar}:</strong> {card.back_json.grammar.noun.article}
                 {card.back_json.grammar.noun.plural &&
                   `, Plural: ${card.back_json.grammar.noun.plural}`}
               </div>
@@ -128,7 +129,7 @@ export function EditCardDialog({
           <div className="flex gap-3 mt-6">
             <Dialog.Close asChild>
               <button className="flex-1 px-4 py-2 border rounded-lg hover:bg-gray-50">
-                Cancel
+                {t.common.cancel}
               </button>
             </Dialog.Close>
             <button
@@ -136,7 +137,7 @@ export function EditCardDialog({
               disabled={saving}
               className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              {saving ? 'Saving...' : 'Save Changes'}
+              {saving ? t.dialogs.saving : t.dialogs.saveChanges}
             </button>
           </div>
         </Dialog.Content>

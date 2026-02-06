@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { BacklogItem, CardBackJSON } from '@/types';
 import { createClient } from '@/lib/supabase/client';
 import { Button, Input, Textarea } from '@/components/ui';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -26,6 +27,7 @@ export function ManualCardDialog({
   const [examples, setExamples] = useState('');
   const [saving, setSaving] = useState(false);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   const handleSave = async () => {
     if (!item) return;
@@ -36,7 +38,7 @@ export function ManualCardDialog({
       .filter((m) => m);
 
     if (meaningsList.length === 0) {
-      toast.error('لطفاً حداقل یک معنی وارد کنید');
+      toast.error(t.errors.pleaseLogin);
       return;
     }
 
@@ -48,7 +50,7 @@ export function ManualCardDialog({
       } = await supabase.auth.getUser();
 
       if (!user) {
-        toast.error('لطفاً ابتدا وارد شوید');
+        toast.error(t.errors.pleaseLogin);
         return;
       }
 
@@ -97,7 +99,7 @@ export function ManualCardDialog({
       });
 
       if (insertError) {
-        toast.error('خطا در ایجاد کارت');
+        toast.error(t.dialogs.cardCreateError);
         console.error(insertError);
         return;
       }
@@ -105,7 +107,7 @@ export function ManualCardDialog({
       // Remove from backlog
       await supabase.from('backlog').delete().eq('id', item.id);
 
-      toast.success('کارت ایجاد شد');
+      toast.success(t.dialogs.cardCreated);
 
       // Reset form
       setMeanings('');
@@ -117,7 +119,7 @@ export function ManualCardDialog({
       onOpenChange(false);
     } catch (error) {
       console.error(error);
-      toast.error('خطا در ایجاد کارت');
+      toast.error(t.dialogs.cardCreateError);
     } finally {
       setSaving(false);
     }
@@ -131,7 +133,7 @@ export function ManualCardDialog({
         <Dialog.Overlay className="fixed inset-0 bg-black/50 z-40" />
         <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-surface border rounded-2xl p-6 w-full max-w-lg max-h-[85vh] overflow-y-auto z-50 shadow-xl">
           <Dialog.Title className="text-xl font-bold text-text mb-1">
-            ورود دستی
+            {t.backlog.manual}
           </Dialog.Title>
           <div className="text-2xl font-bold text-accent mb-6">{item.term}</div>
 
@@ -139,7 +141,7 @@ export function ManualCardDialog({
             {/* Article (for nouns) */}
             <div>
               <label className="block text-sm font-medium text-text mb-2">
-                حرف تعریف (برای اسم)
+                {t.dialogs.articleForNoun}
               </label>
               <div className="flex gap-2">
                 {(['der', 'die', 'das'] as const).map((art) => (
@@ -158,7 +160,7 @@ export function ManualCardDialog({
             {/* Plural */}
             {article && (
               <Input
-                label="جمع"
+                label={t.common.plural}
                 value={plural}
                 onChange={(e) => setPlural(e.target.value)}
                 placeholder="die Bücher"
@@ -169,44 +171,37 @@ export function ManualCardDialog({
             {/* Meanings */}
             <div>
               <label className="block text-sm font-medium text-text mb-2">
-                معانی *
+                {t.today.meanings} *
               </label>
               <Textarea
                 value={meanings}
                 onChange={(e) => setMeanings(e.target.value)}
                 rows={4}
-                placeholder={'معنی اول\nمعنی دوم'}
-                dir="rtl"
+                placeholder={t.dialogs.meaningPlaceholder}
                 inputSize="md"
               />
-              <p className="text-xs text-text-muted mt-1">
-                هر معنی در یک خط
-              </p>
             </div>
 
             {/* Examples */}
             <div>
               <label className="block text-sm font-medium text-text mb-2">
-                مثال‌ها
+                {t.today.examples}
               </label>
               <Textarea
                 value={examples}
                 onChange={(e) => setExamples(e.target.value)}
                 rows={3}
-                placeholder="Ich gehe zur Schule|من به مدرسه می‌روم"
+                placeholder="Ich gehe zur Schule | I go to school"
                 inputSize="md"
                 className="font-mono text-sm"
               />
-              <p className="text-xs text-text-muted mt-1">
-                فرمت: آلمانی|فارسی (هر مثال در یک خط)
-              </p>
             </div>
           </div>
 
           <div className="flex gap-3 mt-6">
             <Dialog.Close asChild>
               <Button variant="secondary" size="md" className="flex-1">
-                انصراف
+                {t.common.cancel}
               </Button>
             </Dialog.Close>
             <Button
@@ -216,7 +211,7 @@ export function ManualCardDialog({
               onClick={handleSave}
               loading={saving}
             >
-              ایجاد کارت
+              {t.dialogs.createCard}
             </Button>
           </div>
         </Dialog.Content>

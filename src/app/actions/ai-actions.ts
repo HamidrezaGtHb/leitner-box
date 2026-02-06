@@ -24,7 +24,7 @@ export async function generateNewTermAction(
     if (!user) {
       return {
         success: false,
-        error: ErrorMessages.AUTH_UNAUTHORIZED.fa,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
       };
     }
 
@@ -57,7 +57,7 @@ export async function generateNewTermAction(
     console.error('generateNewTermAction error:', error);
     return {
       success: false,
-      error: getErrorMessage(error, 'fa'),
+      error: getErrorMessage(error, 'en'),
     };
   }
 }
@@ -79,7 +79,7 @@ export async function generateCardBackAction(
     if (!user) {
       return {
         success: false,
-        error: ErrorMessages.AUTH_UNAUTHORIZED.fa,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
       };
     }
 
@@ -95,7 +95,7 @@ export async function generateCardBackAction(
     console.error('generateCardBackAction error:', error);
     return {
       success: false,
-      error: getErrorMessage(error, 'fa'),
+      error: getErrorMessage(error, 'en'),
     };
   }
 }
@@ -116,7 +116,7 @@ export async function completeBacklogToCardAction(
     if (!user) {
       return {
         success: false,
-        error: ErrorMessages.AUTH_UNAUTHORIZED.fa,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
       };
     }
 
@@ -131,7 +131,7 @@ export async function completeBacklogToCardAction(
     if (fetchError || !backlogItem) {
       return {
         success: false,
-        error: ErrorMessages.DB_OPERATION_FAILED.fa,
+        error: ErrorMessages.DB_OPERATION_FAILED.en,
       };
     }
 
@@ -153,7 +153,7 @@ export async function completeBacklogToCardAction(
         level: backlogItem.level || 'B1',
         pos: (backlogItem.pos || 'other') as any,
         ipa: null,
-        meaning_fa: ['معنی را اضافه کنید'],
+        meaning_fa: ['Add meaning'],
         meaning_en: ['Add meaning'],
         examples: [],
         synonyms: [],
@@ -180,7 +180,7 @@ export async function completeBacklogToCardAction(
     if (insertError) {
       return {
         success: false,
-        error: getErrorMessage(insertError, 'fa'),
+        error: getErrorMessage(insertError, 'en'),
       };
     }
 
@@ -192,7 +192,7 @@ export async function completeBacklogToCardAction(
     console.error('completeBacklogToCardAction error:', error);
     return {
       success: false,
-      error: getErrorMessage(error, 'fa'),
+      error: getErrorMessage(error, 'en'),
     };
   }
 }
@@ -218,7 +218,7 @@ export async function batchGenerateTermsAction(
     if (!user) {
       return {
         success: false,
-        error: ErrorMessages.AUTH_UNAUTHORIZED.fa,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
       };
     }
 
@@ -261,7 +261,7 @@ export async function batchGenerateTermsAction(
     if (results.length === 0) {
       return {
         success: false,
-        error: ErrorMessages.AI_GENERATION_FAILED.fa,
+        error: ErrorMessages.AI_GENERATION_FAILED.en,
       };
     }
 
@@ -270,7 +270,7 @@ export async function batchGenerateTermsAction(
     console.error('batchGenerateTermsAction error:', error);
     return {
       success: false,
-      error: getErrorMessage(error, 'fa'),
+      error: getErrorMessage(error, 'en'),
     };
   }
 }
@@ -294,7 +294,7 @@ export async function addTermToBacklogAction(
     if (!user) {
       return {
         success: false,
-        error: ErrorMessages.AUTH_UNAUTHORIZED.fa,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
       };
     }
 
@@ -310,7 +310,7 @@ export async function addTermToBacklogAction(
     if (error) {
       return {
         success: false,
-        error: getErrorMessage(error, 'fa'),
+        error: getErrorMessage(error, 'en'),
       };
     }
 
@@ -319,7 +319,7 @@ export async function addTermToBacklogAction(
     console.error('addTermToBacklogAction error:', error);
     return {
       success: false,
-      error: getErrorMessage(error, 'fa'),
+      error: getErrorMessage(error, 'en'),
     };
   }
 }

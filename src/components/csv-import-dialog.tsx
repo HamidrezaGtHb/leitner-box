@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { parseCSVFile, generateSampleCSV, type CSVRow } from '@/lib/csv-parser';
 import { normalizeTerm } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -22,6 +23,7 @@ export function CSVImportDialog({
   const [parsedData, setParsedData] = useState<CSVRow[]>([]);
   const [parseErrors, setParseErrors] = useState<string[]>([]);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -29,12 +31,12 @@ export function CSVImportDialog({
 
     // Validate file type
     if (!file.name.endsWith('.csv')) {
-      toast.error('لطفاً یک فایل CSV انتخاب کنید');
+      toast.error(t.dialogs.pleaseSelectCSV);
       return;
     }
 
     setProcessing(true);
-    const loadingToast = toast.loading('در حال خواندن فایل CSV...');
+    const loadingToast = toast.loading(t.dialogs.readingCSV);
 
     try {
       const result = await parseCSVFile(file);
@@ -44,16 +46,16 @@ export function CSVImportDialog({
       }
 
       if (result.data.length === 0) {
-        toast.error('هیچ داده معتبری یافت نشد', { id: loadingToast });
+        toast.error(t.dialogs.noValidData, { id: loadingToast });
       } else {
-        toast.success(`${result.data.length} رکورد یافت شد`, {
+        toast.success(`${result.data.length} ${t.dialogs.recordsFound}`, {
           id: loadingToast,
         });
         setParsedData(result.data);
       }
     } catch (error) {
       console.error('CSV parse error:', error);
-      toast.error('خطا در خواندن فایل', { id: loadingToast });
+      toast.error(t.dialogs.errorReadingFile, { id: loadingToast });
     } finally {
       setProcessing(false);
     }
@@ -61,7 +63,7 @@ export function CSVImportDialog({
 
   const handleImport = async () => {
     if (parsedData.length === 0) {
-      toast.error('هیچ داده‌ای برای وارد کردن وجود ندارد');
+      toast.error(t.dialogs.noDataToImport);
       return;
     }
 
@@ -69,12 +71,12 @@ export function CSVImportDialog({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('لطفاً وارد شوید');
+      toast.error(t.errors.pleaseLogin);
       return;
     }
 
     setProcessing(true);
-    const loadingToast = toast.loading('در حال وارد کردن...');
+    const loadingToast = toast.loading(t.dialogs.importing);
 
     let addedCount = 0;
     let skippedCount = 0;
@@ -117,7 +119,7 @@ export function CSVImportDialog({
 
     if (addedCount > 0) {
       toast.success(
-        `${addedCount} کلمه وارد شد${skippedCount > 0 ? ` (${skippedCount} تکراری)` : ''}`,
+        `${addedCount} ${t.dialogs.wordsImported}${skippedCount > 0 ? ` (${skippedCount} ${t.dialogs.duplicates})` : ''}`,
         { id: loadingToast }
       );
       onSuccess();
@@ -126,7 +128,7 @@ export function CSVImportDialog({
       setParsedData([]);
       setParseErrors([]);
     } else {
-      toast.error('هیچ کلمه جدیدی وارد نشد', { id: loadingToast });
+      toast.error(t.dialogs.noNewWords, { id: loadingToast });
     }
 
     setProcessing(false);
@@ -143,7 +145,6 @@ export function CSVImportDialog({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    toast.success('نمونه فایل دانلود شد');
   };
 
   return (

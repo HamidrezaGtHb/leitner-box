@@ -176,13 +176,13 @@ export default function TodayPage() {
       // All cards reviewed!
       setIsTestMode(false);
       setCelebrate(true);
-      toast.success('مرور امروز تمام شد!', { duration: 3000 });
+      toast.success(t.today.reviewComplete, { duration: 3000 });
       loadData();
     }
   };
 
   const handleExitTest = () => {
-    if (confirm('خارج شوید؟ پیشرفت ذخیره می‌شود.')) {
+    if (confirm(t.today.exitConfirm)) {
       setIsTestMode(false);
       loadData();
     }
@@ -228,11 +228,11 @@ export default function TodayPage() {
                 onClick={handleExitTest}
                 className="text-text-muted hover:text-text text-sm flex items-center gap-1 transition-colors"
               >
-                ← خروج
+                ← {t.today.exit}
               </button>
               <div className="flex items-center gap-3">
                 <span className="px-3 py-1 rounded-full text-sm font-medium bg-accent/15 text-accent">
-                  باکس {currentCard.box}
+                  {t.common.box} {currentCard.box}
                 </span>
                 <span className="text-text text-sm font-medium">
                   {currentTestIndex + 1} / {testQueue.length}
@@ -287,7 +287,7 @@ export default function TodayPage() {
                 {/* Hint at bottom */}
                 <div className="text-center pb-4 text-sm text-text-muted flex items-center justify-center gap-2">
                   <span className="opacity-60">👆</span>
-                  برای دیدن پاسخ کلیک کنید
+                  {t.today.clickToSeeAnswer}
                 </div>
               </Card>
 
@@ -402,10 +402,10 @@ export default function TodayPage() {
                 <span className="text-2xl">{quotaComplete ? '✅' : '📝'}</span>
                 <div>
                   <div className="font-medium text-text">
-                    {quotaComplete ? 'کلمات امروز کامل شد!' : 'اول کلمات امروز را کامل کنید'}
+                    {quotaComplete ? t.today.quotaComplete : t.today.completeQuotaFirst}
                   </div>
                   <div className="text-sm text-text-muted">
-                    {wordsAddedToday} / {dailyLimit} کلمه
+                    {wordsAddedToday} / {dailyLimit} {t.today.words}
                   </div>
                 </div>
               </div>
@@ -415,7 +415,7 @@ export default function TodayPage() {
                   size="md"
                   onClick={() => router.push('/backlog')}
                 >
-                  ➕ افزودن کلمه
+                  ➕ {t.today.addWord}
                 </Button>
               )}
             </div>
@@ -438,12 +438,12 @@ export default function TodayPage() {
                 <span className="text-2xl">📚</span>
                 <div>
                   <div className="font-medium text-text">
-                    {totalDueCards > 0 ? `${totalDueCards} کارت برای مرور` : 'هیچ کارتی برای مرور نیست'}
+                    {totalDueCards > 0 ? `${totalDueCards} ${t.today.cardsForReview}` : t.today.noCardsForReview}
                   </div>
                   {totalDueCards > 0 && (
                     <div className="text-sm text-text-muted">
                       {[1, 2, 3, 4, 5].filter(b => boxCounts[b] > 0).map(b =>
-                        `باکس ${b}: ${boxCounts[b]}`
+                        `${t.common.box} ${b}: ${boxCounts[b]}`
                       ).join(' • ')}
                     </div>
                   )}
@@ -460,9 +460,9 @@ export default function TodayPage() {
                 onClick={handleStartReview}
               >
                 {quotaComplete ? (
-                  <>▶ شروع مرور</>
+                  <>▶ {t.today.startReview}</>
                 ) : (
-                  <>🔒 اول کلمات را کامل کنید</>
+                  <>🔒 {t.today.quotaLocked}</>
                 )}
               </Button>
             )}
@@ -483,7 +483,7 @@ export default function TodayPage() {
         {totalDueCards > 0 && (
           <Card padding="lg">
             <CardContent>
-              <h3 className="text-sm font-medium text-text mb-4">توزیع کارت‌ها در باکس‌ها</h3>
+              <h3 className="text-sm font-medium text-text mb-4">{t.today.boxDistribution}</h3>
               <div className="flex gap-2">
                 {[1, 2, 3, 4, 5].map(box => {
                   const count = boxCounts[box] || 0;
@@ -499,7 +499,7 @@ export default function TodayPage() {
                           <span className="font-bold text-text">{count}</span>
                         </div>
                       </div>
-                      <div className="text-xs text-text-muted mt-1">باکس {box}</div>
+                      <div className="text-xs text-text-muted mt-1">{t.common.box} {box}</div>
                     </div>
                   );
                 })}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { extractTextFromImage, parseGermanTerms } from '@/lib/ocr';
 import { normalizeTerm } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
+import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
@@ -23,6 +24,7 @@ export function OCRUploadDialog({
   const [selectedTerms, setSelectedTerms] = useState<Set<string>>(new Set());
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const supabase = createClient();
+  const { t } = useLanguage();
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -30,7 +32,7 @@ export function OCRUploadDialog({
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      toast.error('لطفاً یک فایل تصویری انتخاب کنید');
+      toast.error(t.dialogs.pleaseSelectImage);
       return;
     }
 
@@ -42,23 +44,23 @@ export function OCRUploadDialog({
     reader.readAsDataURL(file);
 
     setProcessing(true);
-    const loadingToast = toast.loading('در حال استخراج متن از تصویر...');
+    const loadingToast = toast.loading(t.dialogs.extractingText);
 
     try {
       const lines = await extractTextFromImage(file);
       const terms = parseGermanTerms(lines);
 
       if (terms.length === 0) {
-        toast.error('هیچ کلمه آلمانی یافت نشد', { id: loadingToast });
+        toast.error(t.dialogs.noGermanWords, { id: loadingToast });
       } else {
-        toast.success(`${terms.length} کلمه یافت شد`, { id: loadingToast });
+        toast.success(`${terms.length} ${t.dialogs.wordsFound}`, { id: loadingToast });
         setExtractedTerms(terms);
         // Select all by default
         setSelectedTerms(new Set(terms));
       }
     } catch (error) {
       console.error('OCR error:', error);
-      toast.error('خطا در استخراج متن', { id: loadingToast });
+      toast.error(t.dialogs.errorExtractingText, { id: loadingToast });
     } finally {
       setProcessing(false);
     }
@@ -76,7 +78,7 @@ export function OCRUploadDialog({
 
   const handleAddToBacklog = async () => {
     if (selectedTerms.size === 0) {
-      toast.error('لطفاً حداقل یک کلمه انتخاب کنید');
+      toast.error(t.dialogs.pleaseSelectWord);
       return;
     }
 
@@ -84,12 +86,12 @@ export function OCRUploadDialog({
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      toast.error('لطفاً وارد شوید');
+      toast.error(t.errors.pleaseLogin);
       return;
     }
 
     setProcessing(true);
-    const loadingToast = toast.loading('در حال افزودن به Backlog...');
+    const loadingToast = toast.loading(t.dialogs.addingToBacklog);
 
     let addedCount = 0;
     let skippedCount = 0;
@@ -128,7 +130,7 @@ export function OCRUploadDialog({
     }
 
     if (addedCount > 0) {
-      toast.success(`${addedCount} کلمه اضافه شد${skippedCount > 0 ? ` (${skippedCount} تکراری)` : ''}`, {
+      toast.success(`${addedCount} ${t.dialogs.addedToBacklog}${skippedCount > 0 ? ` (${skippedCount} ${t.dialogs.duplicates})` : ''}`, {
         id: loadingToast,
       });
       onSuccess();
@@ -138,7 +140,7 @@ export function OCRUploadDialog({
       setSelectedTerms(new Set());
       setImagePreview(null);
     } else {
-      toast.error('هیچ کلمه جدیدی اضافه نشد', { id: loadingToast });
+      toast.error(t.dialogs.noNewWords, { id: loadingToast });
     }
 
     setProcessing(false);
