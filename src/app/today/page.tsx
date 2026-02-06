@@ -20,12 +20,21 @@ const DEFAULT_SETTINGS: Settings = {
   updated_at: new Date().toISOString(),
 };
 
+// Box colors for visual distinction
+const BOX_COLORS: Record<number, { bg: string; text: string; badge: 'warning' | 'info' | 'success' }> = {
+  5: { bg: 'bg-emerald-500/15', text: 'text-emerald-600', badge: 'success' },
+  4: { bg: 'bg-indigo-500/15', text: 'text-indigo-600', badge: 'info' },
+  3: { bg: 'bg-blue-500/15', text: 'text-blue-600', badge: 'info' },
+  2: { bg: 'bg-orange-500/15', text: 'text-orange-600', badge: 'warning' },
+  1: { bg: 'bg-amber-500/15', text: 'text-amber-600', badge: 'warning' },
+};
+
 export default function TodayPage() {
-  const [learningCards, setLearningCards] = useState<CardType[]>([]);
-  const [reviewCards, setReviewCards] = useState<CardType[]>([]);
+  const [cardsByBox, setCardsByBox] = useState<Record<number, CardType[]>>({});
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
+  const [showNotification, setShowNotification] = useState(true);
 
   // Card detail modal state
   const [modalOpen, setModalOpen] = useState(false);
@@ -34,6 +43,7 @@ export default function TodayPage() {
 
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
+  const [testBox, setTestBox] = useState<number>(0);
   const [testQueue, setTestQueue] = useState<CardType[]>([]);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
@@ -70,38 +80,59 @@ export default function TodayPage() {
 
     const today = formatDate(new Date());
 
-    // Load all due cards
+    // Load all due cards - ordered by box descending (5 → 1)
     const { data, error } = await supabase
       .from('cards')
       .select('*')
       .eq('user_id', user.id)
       .lte('due_date', today)
-      .order('box', { ascending: true });
+      .order('box', { ascending: false });
 
     if (error) {
       console.error('Error loading due cards:', error);
       toast.error(t.errors.loadingCards);
     } else {
       const allCards = data || [];
-      // Box 1 = Learning, Box 2-5 = Review
-      const learning = allCards.filter((c) => c.box === 1);
-      const review = allCards.filter((c) => c.box > 1);
-
-      setLearningCards(learning);
-      // Apply daily limit
-      setReviewCards(review.slice(0, userSettings.daily_limit));
+      // Group by box
+      const grouped: Record<number, CardType[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+      allCards.forEach(card => {
+        if (grouped[card.box]) {
+          grouped[card.box].push(card);
+        }
+      });
+      setCardsByBox(grouped);
     }
     setLoading(false);
   };
 
-  const handleStartTest = () => {
-    // Combine learning and review cards for testing
-    const allDueCards = [...learningCards, ...reviewCards];
-    if (allDueCards.length === 0) {
+  // Get which box should be reviewed next (highest box with due cards)
+  const getNextReviewBox = (): number | null => {
+    for (let box = 5; box >= 1; box--) {
+      if (cardsByBox[box]?.length > 0) {
+        return box;
+      }
+    }
+    return null;
+  };
+
+  // Check if a box is locked (higher box has unreviewed cards)
+  const isBoxLocked = (box: number): boolean => {
+    for (let higherBox = 5; higherBox > box; higherBox--) {
+      if (cardsByBox[higherBox]?.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+
+  const handleStartBoxTest = (box: number) => {
+    const cards = cardsByBox[box] || [];
+    if (cards.length === 0) {
       toast.error(t.today.noCardsToday);
       return;
     }
-    setTestQueue(allDueCards);
+    setTestBox(box);
+    setTestQueue(cards);
     setCurrentTestIndex(0);
     setShowAnswer(false);
     setTestResults({ correct: 0, wrong: 0 });
@@ -163,17 +194,17 @@ export default function TodayPage() {
     if (currentTestIndex < testQueue.length - 1) {
       setCurrentTestIndex(currentTestIndex + 1);
     } else {
-      // Test complete
+      // Box test complete
       setIsTestMode(false);
       setCelebrate(true);
-      toast.success(t.today.allReviewsComplete, { duration: 4000 });
+      toast.success(`باکس ${testBox} تمام شد!`, { duration: 3000 });
       // Reload data to reflect changes
       loadData();
     }
   };
 
   const handleExitTest = () => {
-    if (confirm('Exit test? Progress will be saved.')) {
+    if (confirm('خارج شوید؟ پیشرفت ذخیره می‌شود.')) {
       setIsTestMode(false);
       loadData();
     }
@@ -194,7 +225,8 @@ export default function TodayPage() {
     return 'default' as const;
   };
 
-  const totalDueCards = learningCards.length + reviewCards.length;
+  const totalDueCards = Object.values(cardsByBox).reduce((sum, cards) => sum + cards.length, 0);
+  const nextReviewBox = getNextReviewBox();
 
   if (loading) {
     return (
@@ -213,6 +245,7 @@ export default function TodayPage() {
     const article = currentCard.back_json.grammar.noun?.article;
     const cardVariant = getCardVariant(article);
     const progress = ((currentTestIndex + 1) / testQueue.length) * 100;
+    const boxColor = BOX_COLORS[testBox];
 
     return (
       <div className="min-h-screen bg-surface-2 flex flex-col">
@@ -224,10 +257,15 @@ export default function TodayPage() {
                 onClick={handleExitTest}
                 className="text-text-muted hover:text-text text-sm flex items-center gap-1 transition-colors"
               >
-                ← {t.today.exitTest}
+                ← خروج
               </button>
-              <div className="text-text text-sm font-medium">
-                {currentTestIndex + 1} / {testQueue.length}
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${boxColor.bg} ${boxColor.text}`}>
+                  باکس {testBox}
+                </span>
+                <span className="text-text text-sm font-medium">
+                  {currentTestIndex + 1} / {testQueue.length}
+                </span>
               </div>
             </div>
             {/* Progress bar */}
@@ -373,34 +411,44 @@ export default function TodayPage() {
     );
   }
 
-  // MAIN VIEW - Show all cards
+  // MAIN VIEW - Show boxes in order 5 → 4 → 3 → 2 → 1
   return (
     <div className="min-h-screen bg-bg">
       <Nav />
       <Celebration trigger={celebrate} />
 
       <div className="max-w-5xl mx-auto p-4 py-6 space-y-6">
-        {/* Header with Start Test button */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold text-text tracking-tight">{t.today.title}</h1>
-            <p className="text-text-muted text-sm">
-              {totalDueCards > 0
-                ? `${totalDueCards} ${t.common.cards} ${t.today.dueForReview.toLowerCase()}`
-                : t.today.allReviewsDone}
-            </p>
-          </div>
-
-          {totalDueCards > 0 && (
-            <Button
-              variant="primary"
-              size="lg"
-              onClick={handleStartTest}
-              className="sm:px-8"
+        {/* Notification Banner */}
+        {showNotification && totalDueCards > 0 && (
+          <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📚</span>
+              <div>
+                <div className="font-medium text-text">
+                  {totalDueCards} کارت برای مرور امروز
+                </div>
+                <div className="text-sm text-text-muted">
+                  {nextReviewBox && `از باکس ${nextReviewBox} شروع کنید`}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowNotification(false)}
+              className="text-text-muted hover:text-text p-1"
             >
-              ▶ {t.today.startTest} ({totalDueCards})
-            </Button>
-          )}
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Header */}
+        <div>
+          <h1 className="text-2xl font-semibold text-text tracking-tight">{t.today.title}</h1>
+          <p className="text-text-muted text-sm">
+            {totalDueCards > 0
+              ? 'باکس‌های بالاتر اولویت بیشتری دارند'
+              : t.today.allReviewsDone}
+          </p>
         </div>
 
         {/* No cards message */}
@@ -414,98 +462,86 @@ export default function TodayPage() {
           </Card>
         )}
 
-        {/* Learning Cards (Box 1) */}
-        {learningCards.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text flex items-center gap-2">
-                <span className="w-8 h-8 bg-warning/15 rounded-xl flex items-center justify-center text-warning text-sm font-bold">1</span>
-                {t.today.newWords}
-              </h2>
-              <Badge variant="warning" size="md">{learningCards.length} {t.common.cards}</Badge>
+        {/* Boxes - from 5 to 1 */}
+        {[5, 4, 3, 2, 1].map((box) => {
+          const cards = cardsByBox[box] || [];
+          const boxColor = BOX_COLORS[box];
+          const locked = isBoxLocked(box);
+          const isNextBox = nextReviewBox === box;
+
+          if (cards.length === 0) return null;
+
+          return (
+            <div key={box} className={`space-y-4 ${locked ? 'opacity-50' : ''}`}>
+              {/* Box Header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className={`w-10 h-10 ${boxColor.bg} rounded-xl flex items-center justify-center ${boxColor.text} text-lg font-bold`}>
+                    {box}
+                  </span>
+                  <div>
+                    <h2 className="text-lg font-semibold text-text">
+                      باکس {box}
+                      {box === 1 && ' (کلمات جدید)'}
+                      {box === 5 && ' (تسلط)'}
+                    </h2>
+                    {locked && (
+                      <p className="text-xs text-text-muted">
+                        🔒 اول باکس‌های بالاتر را مرور کنید
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant={boxColor.badge} size="md">
+                    {cards.length} کارت
+                  </Badge>
+                  {!locked && (
+                    <Button
+                      variant={isNextBox ? 'primary' : 'secondary'}
+                      size="md"
+                      onClick={() => handleStartBoxTest(box)}
+                    >
+                      ▶ مرور
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {/* Cards Grid */}
+              {!locked && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {cards.map((card, index) => {
+                    const article = card.back_json.grammar.noun?.article;
+                    const cardVariant = getCardVariant(article);
+
+                    return (
+                      <Card
+                        key={card.id}
+                        variant={cardVariant}
+                        padding="md"
+                        className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
+                        onClick={() => openCardModal(cards, index)}
+                      >
+                        <CardContent className="text-center space-y-2">
+                          {article && (
+                            <div className="flex justify-center">
+                              <ArticleBadge article={article} size="sm" />
+                            </div>
+                          )}
+                          <div className="font-semibold text-text truncate">{card.term}</div>
+                          <div className="text-xs text-text-muted truncate">
+                            {card.back_json.meaning_fa[0]}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {learningCards.map((card, index) => {
-                const article = card.back_json.grammar.noun?.article;
-                const cardVariant = getCardVariant(article);
-
-                return (
-                  <Card
-                    key={card.id}
-                    variant={cardVariant}
-                    padding="md"
-                    className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-                    onClick={() => openCardModal(learningCards, index)}
-                  >
-                    <CardContent className="text-center space-y-2">
-                      {article && (
-                        <div className="flex justify-center">
-                          <ArticleBadge article={article} size="sm" />
-                        </div>
-                      )}
-                      <div className="font-semibold text-text truncate">{card.term}</div>
-                      <div className="text-xs text-text-muted truncate">
-                        {card.back_json.meaning_fa[0]}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Review Cards (Box 2-5) */}
-        {reviewCards.length > 0 && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-text flex items-center gap-2">
-                <span className="w-8 h-8 bg-info/15 rounded-xl flex items-center justify-center text-info text-sm font-bold">2-5</span>
-                {t.today.dueForReview}
-              </h2>
-              <Badge variant="info" size="md">{reviewCards.length} {t.common.cards}</Badge>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {reviewCards.map((card, index) => {
-                const article = card.back_json.grammar.noun?.article;
-                const cardVariant = getCardVariant(article);
-
-                return (
-                  <Card
-                    key={card.id}
-                    variant={cardVariant}
-                    padding="md"
-                    className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-                    onClick={() => openCardModal(reviewCards, index)}
-                  >
-                    <CardContent className="text-center space-y-2">
-                      {article && (
-                        <div className="flex justify-center">
-                          <ArticleBadge article={article} size="sm" />
-                        </div>
-                      )}
-                      <div className="font-semibold text-text truncate">{card.term}</div>
-                      <div className="flex items-center justify-center gap-1">
-                        <span className="text-xs bg-info/15 text-info px-2 py-0.5 rounded-full font-medium">
-                          {t.common.box} {card.box}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Daily limit info */}
-        {reviewCards.length >= settings.daily_limit && (
-          <div className="text-center text-sm text-text-muted py-2">
-            {t.settings.dailyLimit}: {settings.daily_limit} {t.common.cards}
-          </div>
-        )}
+          );
+        })}
 
         {/* Card Detail Modal */}
         <CardDetailModal
