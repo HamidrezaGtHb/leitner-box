@@ -122,24 +122,61 @@ export default function SettingsPage() {
       return;
     }
 
-    const updatedSettings = {
-      ...settings,
-      ...newSettings,
+    // Build update payload - don't include created_at to avoid overwriting
+    const updatePayload = {
       user_id: user.id,
+      intervals: settings?.intervals || DEFAULT_SETTINGS.intervals,
+      daily_limit: newSettings.daily_limit ?? settings?.daily_limit ?? DEFAULT_SETTINGS.daily_limit,
+      hide_future_cards: newSettings.hide_future_cards ?? settings?.hide_future_cards ?? DEFAULT_SETTINGS.hide_future_cards,
       updated_at: new Date().toISOString(),
     };
 
-    const { error } = await supabase
+    // First check if settings exist for this user
+    const { data: existingSettings } = await supabase
       .from('settings')
-      .upsert(updatedSettings, { onConflict: 'user_id' });
+      .select('user_id')
+      .eq('user_id', user.id)
+      .single();
 
-    if (error) {
-      toast.error(t.settings.settingsError);
-      console.error('Error saving settings:', error);
+    if (existingSettings) {
+      // Settings exist, do update
+      const { error: updateError } = await supabase
+        .from('settings')
+        .update({
+          intervals: updatePayload.intervals,
+          daily_limit: updatePayload.daily_limit,
+          hide_future_cards: updatePayload.hide_future_cards,
+          updated_at: updatePayload.updated_at,
+        })
+        .eq('user_id', user.id);
+
+      if (updateError) {
+        toast.error(t.settings.settingsError);
+        console.error('Update error:', updateError);
+        setSaving(false);
+        return;
+      }
     } else {
-      setSettings(updatedSettings as Settings);
-      toast.success(t.settings.settingsSaved);
+      // Settings don't exist, do insert
+      const { error: insertError } = await supabase
+        .from('settings')
+        .insert(updatePayload);
+
+      if (insertError) {
+        toast.error(t.settings.settingsError);
+        console.error('Insert error:', insertError);
+        setSaving(false);
+        return;
+      }
     }
+
+    // Update local state with new values
+    setSettings({
+      ...settings,
+      ...updatePayload,
+      created_at: settings?.created_at || new Date().toISOString(),
+    } as Settings);
+    toast.success(t.settings.settingsSaved);
     setSaving(false);
   };
 

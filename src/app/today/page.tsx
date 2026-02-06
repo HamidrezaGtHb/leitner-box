@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
-import { Button, Card, CardContent, ArticleBadge, Badge, CopyButton } from '@/components/ui';
-import { CardDetailModal } from '@/components/card-detail-modal';
+import { Button, Card, CardContent, ArticleBadge, CopyButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
@@ -20,37 +20,26 @@ const DEFAULT_SETTINGS: Settings = {
   updated_at: new Date().toISOString(),
 };
 
-// Box colors for visual distinction
-const BOX_COLORS: Record<number, { bg: string; text: string; badge: 'warning' | 'info' | 'success' }> = {
-  5: { bg: 'bg-emerald-500/15', text: 'text-emerald-600', badge: 'success' },
-  4: { bg: 'bg-indigo-500/15', text: 'text-indigo-600', badge: 'info' },
-  3: { bg: 'bg-blue-500/15', text: 'text-blue-600', badge: 'info' },
-  2: { bg: 'bg-orange-500/15', text: 'text-orange-600', badge: 'warning' },
-  1: { bg: 'bg-amber-500/15', text: 'text-amber-600', badge: 'warning' },
-};
-
 export default function TodayPage() {
-  const [cardsByBox, setCardsByBox] = useState<Record<number, CardType[]>>({});
+  const [dueCards, setDueCards] = useState<CardType[]>([]);
+  const [wordsAddedToday, setWordsAddedToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [showNotification, setShowNotification] = useState(true);
-
-  // Card detail modal state
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalCards, setModalCards] = useState<CardType[]>([]);
-  const [modalIndex, setModalIndex] = useState(0);
 
   // Test mode state
   const [isTestMode, setIsTestMode] = useState(false);
-  const [testBox, setTestBox] = useState<number>(0);
   const [testQueue, setTestQueue] = useState<CardType[]>([]);
   const [currentTestIndex, setCurrentTestIndex] = useState(0);
   const [showAnswer, setShowAnswer] = useState(false);
   const [testResults, setTestResults] = useState<{ correct: number; wrong: number }>({ correct: 0, wrong: 0 });
 
   const supabase = createClient();
+  const router = useRouter();
   const { t } = useLanguage();
+
+  const dailyLimit = settings.daily_limit || 10;
+  const quotaComplete = wordsAddedToday >= dailyLimit;
 
   useEffect(() => {
     loadData();
@@ -80,59 +69,49 @@ export default function TodayPage() {
 
     const today = formatDate(new Date());
 
-    // Load all due cards - ordered by box descending (5 → 1)
+    // Count words added today
+    const { count: todayCount } = await supabase
+      .from('cards')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', user.id)
+      .gte('created_at', `${today}T00:00:00`)
+      .lt('created_at', `${today}T23:59:59`);
+
+    setWordsAddedToday(todayCount || 0);
+
+    // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase
       .from('cards')
       .select('*')
       .eq('user_id', user.id)
       .lte('due_date', today)
-      .order('box', { ascending: false });
+      .order('box', { ascending: true })
+      .order('due_date', { ascending: true });
 
     if (error) {
       console.error('Error loading due cards:', error);
       toast.error(t.errors.loadingCards);
     } else {
-      const allCards = data || [];
-      // Group by box
-      const grouped: Record<number, CardType[]> = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-      allCards.forEach(card => {
-        if (grouped[card.box]) {
-          grouped[card.box].push(card);
-        }
-      });
-      setCardsByBox(grouped);
+      setDueCards(data || []);
     }
     setLoading(false);
   };
 
-  // Get which box should be reviewed next (highest box with due cards)
-  const getNextReviewBox = (): number | null => {
-    for (let box = 5; box >= 1; box--) {
-      if (cardsByBox[box]?.length > 0) {
-        return box;
-      }
-    }
-    return null;
+  // Get box distribution for display
+  const getBoxCounts = () => {
+    const counts: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    dueCards.forEach(card => {
+      counts[card.box] = (counts[card.box] || 0) + 1;
+    });
+    return counts;
   };
 
-  // Check if a box is locked (higher box has unreviewed cards)
-  const isBoxLocked = (box: number): boolean => {
-    for (let higherBox = 5; higherBox > box; higherBox--) {
-      if (cardsByBox[higherBox]?.length > 0) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const handleStartBoxTest = (box: number) => {
-    const cards = cardsByBox[box] || [];
-    if (cards.length === 0) {
+  const handleStartReview = () => {
+    if (dueCards.length === 0) {
       toast.error(t.today.noCardsToday);
       return;
     }
-    setTestBox(box);
-    setTestQueue(cards);
+    setTestQueue(dueCards);
     setCurrentTestIndex(0);
     setShowAnswer(false);
     setTestResults({ correct: 0, wrong: 0 });
@@ -194,11 +173,10 @@ export default function TodayPage() {
     if (currentTestIndex < testQueue.length - 1) {
       setCurrentTestIndex(currentTestIndex + 1);
     } else {
-      // Box test complete
+      // All cards reviewed!
       setIsTestMode(false);
       setCelebrate(true);
-      toast.success(`باکس ${testBox} تمام شد!`, { duration: 3000 });
-      // Reload data to reflect changes
+      toast.success('مرور امروز تمام شد!', { duration: 3000 });
       loadData();
     }
   };
@@ -210,12 +188,6 @@ export default function TodayPage() {
     }
   };
 
-  const openCardModal = (cards: CardType[], index: number) => {
-    setModalCards(cards);
-    setModalIndex(index);
-    setModalOpen(true);
-  };
-
   const getCardVariant = (article: string | null | undefined) => {
     if (!article) return 'default' as const;
     const lower = article.toLowerCase();
@@ -225,8 +197,8 @@ export default function TodayPage() {
     return 'default' as const;
   };
 
-  const totalDueCards = Object.values(cardsByBox).reduce((sum, cards) => sum + cards.length, 0);
-  const nextReviewBox = getNextReviewBox();
+  const boxCounts = getBoxCounts();
+  const totalDueCards = dueCards.length;
 
   if (loading) {
     return (
@@ -245,7 +217,6 @@ export default function TodayPage() {
     const article = currentCard.back_json.grammar.noun?.article;
     const cardVariant = getCardVariant(article);
     const progress = ((currentTestIndex + 1) / testQueue.length) * 100;
-    const boxColor = BOX_COLORS[testBox];
 
     return (
       <div className="min-h-screen bg-surface-2 flex flex-col">
@@ -260,8 +231,8 @@ export default function TodayPage() {
                 ← خروج
               </button>
               <div className="flex items-center gap-3">
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${boxColor.bg} ${boxColor.text}`}>
-                  باکس {testBox}
+                <span className="px-3 py-1 rounded-full text-sm font-medium bg-accent/15 text-accent">
+                  باکس {currentCard.box}
                 </span>
                 <span className="text-text text-sm font-medium">
                   {currentTestIndex + 1} / {testQueue.length}
@@ -411,146 +382,131 @@ export default function TodayPage() {
     );
   }
 
-  // MAIN VIEW - Show boxes in order 5 → 4 → 3 → 2 → 1
+  // MAIN VIEW
   return (
     <div className="min-h-screen bg-bg">
       <Nav />
       <Celebration trigger={celebrate} />
 
       <div className="max-w-5xl mx-auto p-4 py-6 space-y-6">
-        {/* Notification Banner */}
-        {showNotification && totalDueCards > 0 && (
-          <div className="bg-accent/10 border border-accent/20 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">📚</span>
-              <div>
-                <div className="font-medium text-text">
-                  {totalDueCards} کارت برای مرور امروز
-                </div>
-                <div className="text-sm text-text-muted">
-                  {nextReviewBox && `از باکس ${nextReviewBox} شروع کنید`}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={() => setShowNotification(false)}
-              className="text-text-muted hover:text-text p-1"
-            >
-              ✕
-            </button>
-          </div>
-        )}
-
         {/* Header */}
         <div>
           <h1 className="text-2xl font-semibold text-text tracking-tight">{t.today.title}</h1>
-          <p className="text-text-muted text-sm">
-            {totalDueCards > 0
-              ? 'باکس‌های بالاتر اولویت بیشتری دارند'
-              : t.today.allReviewsDone}
-          </p>
         </div>
 
-        {/* No cards message */}
-        {totalDueCards === 0 && (
-          <Card padding="lg" className="text-center">
-            <CardContent className="py-12 space-y-4">
-              <div className="text-6xl mb-4">🎉</div>
-              <h2 className="text-xl font-semibold text-text">{t.today.noCardsToday}</h2>
-              <p className="text-text-muted">{t.today.comeBackTomorrow}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Boxes - from 5 to 1 */}
-        {[5, 4, 3, 2, 1].map((box) => {
-          const cards = cardsByBox[box] || [];
-          const boxColor = BOX_COLORS[box];
-          const locked = isBoxLocked(box);
-          const isNextBox = nextReviewBox === box;
-
-          if (cards.length === 0) return null;
-
-          return (
-            <div key={box} className={`space-y-4 ${locked ? 'opacity-50' : ''}`}>
-              {/* Box Header */}
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`w-10 h-10 ${boxColor.bg} rounded-xl flex items-center justify-center ${boxColor.text} text-lg font-bold`}>
-                    {box}
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-semibold text-text">
-                      باکس {box}
-                      {box === 1 && ' (کلمات جدید)'}
-                      {box === 5 && ' (تسلط)'}
-                    </h2>
-                    {locked && (
-                      <p className="text-xs text-text-muted">
-                        🔒 اول باکس‌های بالاتر را مرور کنید
-                      </p>
-                    )}
+        {/* Daily Word Quota Card */}
+        <Card padding="lg" className={!quotaComplete ? 'border-warning/50 bg-warning/5' : 'border-success/50 bg-success/5'}>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">{quotaComplete ? '✅' : '📝'}</span>
+                <div>
+                  <div className="font-medium text-text">
+                    {quotaComplete ? 'کلمات امروز کامل شد!' : 'اول کلمات امروز را کامل کنید'}
+                  </div>
+                  <div className="text-sm text-text-muted">
+                    {wordsAddedToday} / {dailyLimit} کلمه
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Badge variant={boxColor.badge} size="md">
-                    {cards.length} کارت
-                  </Badge>
-                  {!locked && (
-                    <Button
-                      variant={isNextBox ? 'primary' : 'secondary'}
-                      size="md"
-                      onClick={() => handleStartBoxTest(box)}
-                    >
-                      ▶ مرور
-                    </Button>
+              </div>
+              {!quotaComplete && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => router.push('/backlog')}
+                >
+                  ➕ افزودن کلمه
+                </Button>
+              )}
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-500 ${quotaComplete ? 'bg-success' : 'bg-warning'}`}
+                style={{ width: `${Math.min((wordsAddedToday / dailyLimit) * 100, 100)}%` }}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Review Card */}
+        <Card padding="lg">
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">📚</span>
+                <div>
+                  <div className="font-medium text-text">
+                    {totalDueCards > 0 ? `${totalDueCards} کارت برای مرور` : 'هیچ کارتی برای مرور نیست'}
+                  </div>
+                  {totalDueCards > 0 && (
+                    <div className="text-sm text-text-muted">
+                      {[1, 2, 3, 4, 5].filter(b => boxCounts[b] > 0).map(b =>
+                        `باکس ${b}: ${boxCounts[b]}`
+                      ).join(' • ')}
+                    </div>
                   )}
                 </div>
               </div>
-
-              {/* Cards Grid */}
-              {!locked && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {cards.map((card, index) => {
-                    const article = card.back_json.grammar.noun?.article;
-                    const cardVariant = getCardVariant(article);
-
-                    return (
-                      <Card
-                        key={card.id}
-                        variant={cardVariant}
-                        padding="md"
-                        className="cursor-pointer hover:shadow-md hover:scale-[1.02] transition-all"
-                        onClick={() => openCardModal(cards, index)}
-                      >
-                        <CardContent className="text-center space-y-2">
-                          {article && (
-                            <div className="flex justify-center">
-                              <ArticleBadge article={article} size="sm" />
-                            </div>
-                          )}
-                          <div className="font-semibold text-text truncate">{card.term}</div>
-                          <div className="text-xs text-text-muted truncate">
-                            {card.back_json.meaning_fa[0]}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
             </div>
-          );
-        })}
 
-        {/* Card Detail Modal */}
-        <CardDetailModal
-          cards={modalCards}
-          currentIndex={modalIndex}
-          open={modalOpen}
-          onOpenChange={setModalOpen}
-          onNavigate={setModalIndex}
-        />
+            {totalDueCards > 0 && (
+              <Button
+                variant={quotaComplete ? 'primary' : 'secondary'}
+                size="lg"
+                className="w-full"
+                disabled={!quotaComplete}
+                onClick={handleStartReview}
+              >
+                {quotaComplete ? (
+                  <>▶ شروع مرور</>
+                ) : (
+                  <>🔒 اول کلمات را کامل کنید</>
+                )}
+              </Button>
+            )}
+
+            {totalDueCards === 0 && quotaComplete && (
+              <div className="text-center py-8 space-y-4">
+                <div className="text-6xl">🎉</div>
+                <div>
+                  <h2 className="text-xl font-semibold text-text">{t.today.noCardsToday}</h2>
+                  <p className="text-text-muted">{t.today.comeBackTomorrow}</p>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Box Distribution Preview (if has due cards) */}
+        {totalDueCards > 0 && (
+          <Card padding="lg">
+            <CardContent>
+              <h3 className="text-sm font-medium text-text mb-4">توزیع کارت‌ها در باکس‌ها</h3>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map(box => {
+                  const count = boxCounts[box] || 0;
+                  const percentage = totalDueCards > 0 ? (count / totalDueCards) * 100 : 0;
+                  return (
+                    <div key={box} className="flex-1 text-center">
+                      <div className="h-16 bg-muted rounded-lg relative overflow-hidden">
+                        <div
+                          className="absolute bottom-0 w-full bg-accent transition-all"
+                          style={{ height: `${Math.max(percentage, count > 0 ? 15 : 0)}%` }}
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="font-bold text-text">{count}</span>
+                        </div>
+                      </div>
+                      <div className="text-xs text-text-muted mt-1">باکس {box}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
