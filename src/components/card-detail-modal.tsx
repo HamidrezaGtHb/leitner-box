@@ -155,6 +155,13 @@ export function CardDetailModal({
 
                 {/* Content */}
                 <CardContent className="p-6 space-y-5">
+                  {/* IPA */}
+                  {card.back_json.ipa && (
+                    <div className="text-center">
+                      <span className="font-mono text-sm text-accent">[{card.back_json.ipa}]</span>
+                    </div>
+                  )}
+
                   {/* Meanings */}
                   <div>
                     <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
@@ -170,7 +177,69 @@ export function CardDetailModal({
                     </ul>
                   </div>
 
-                  {/* Examples */}
+                  {/* Grammar: Noun */}
+                  {card.back_json.grammar.noun?.plural && (
+                    <div className="p-4 bg-muted/50 rounded-xl">
+                      <span className="text-text-muted">{t.common.plural}: </span>
+                      <span className="text-text font-medium">{card.back_json.grammar.noun.plural}</span>
+                    </div>
+                  )}
+
+                  {/* Grammar: Verb */}
+                  {card.back_json.grammar.verb && (
+                    <div className="flex flex-wrap gap-2">
+                      {card.back_json.grammar.verb.prasens && (
+                        <span className="px-3 py-1 bg-surface-2 rounded-lg text-sm text-text-muted">
+                          Präs: <span className="text-text font-medium">{card.back_json.grammar.verb.prasens}</span>
+                        </span>
+                      )}
+                      {card.back_json.grammar.verb.praeteritum && (
+                        <span className="px-3 py-1 bg-surface-2 rounded-lg text-sm text-text-muted">
+                          Prät: <span className="text-text font-medium">{card.back_json.grammar.verb.praeteritum}</span>
+                        </span>
+                      )}
+                      {card.back_json.grammar.verb.partizip2 && (
+                        <span className="px-3 py-1 bg-surface-2 rounded-lg text-sm text-text-muted">
+                          Perf: <span className="text-text font-medium">{card.back_json.grammar.verb.perfekt_aux} {card.back_json.grammar.verb.partizip2}</span>
+                        </span>
+                      )}
+                      {card.back_json.grammar.verb.separable && (
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-lg text-sm font-medium">
+                          Trennbar
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Grammar: Adjective */}
+                  {card.back_json.grammar.adjective && (
+                    <div className="flex flex-wrap gap-2">
+                      {card.back_json.grammar.adjective.comparative && (
+                        <span className="px-3 py-1 bg-surface-2 rounded-lg text-sm text-text-muted">
+                          Komp: <span className="text-text font-medium">{card.back_json.grammar.adjective.comparative}</span>
+                        </span>
+                      )}
+                      {card.back_json.grammar.adjective.superlative && (
+                        <span className="px-3 py-1 bg-surface-2 rounded-lg text-sm text-text-muted">
+                          Sup: <span className="text-text font-medium">{card.back_json.grammar.adjective.superlative}</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Prepositions */}
+                  {card.back_json.grammar.prepositions && card.back_json.grammar.prepositions.length > 0 && (
+                    <div className="space-y-2">
+                      {card.back_json.grammar.prepositions.map((prep, i) => (
+                        <div key={i} className="p-3 bg-accent/5 rounded-xl text-sm">
+                          <span className="font-bold text-accent">{prep.preposition} + {prep.case}</span>
+                          <div className="text-text-muted mt-1">{prep.example}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Examples with Register badges */}
                   {card.back_json.examples.length > 0 && (
                     <div>
                       <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
@@ -179,19 +248,22 @@ export function CardDetailModal({
                       <div className="space-y-3">
                         {card.back_json.examples.slice(0, 3).map((ex, i) => (
                           <div key={i} className="p-4 bg-surface-2 rounded-xl">
-                            <div className="text-text font-medium mb-1">{ex.de}</div>
-                            <div className="text-text-muted">{ex.fa}</div>
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1">
+                                <div className="text-text font-medium mb-1">{ex.de}</div>
+                                <div className="text-text-muted">{ex.fa}</div>
+                              </div>
+                              {ex.register && ex.register !== 'general' && (
+                                <span className={`shrink-0 px-2 py-0.5 rounded text-xs font-medium ${
+                                  ex.register === 'formal' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {ex.register === 'formal' ? 'Formell' : 'Umgangs.'}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
-
-                  {/* Grammar */}
-                  {card.back_json.grammar.noun?.plural && (
-                    <div className="p-4 bg-muted/50 rounded-xl">
-                      <span className="text-text-muted">{t.common.plural}: </span>
-                      <span className="text-text font-medium">{card.back_json.grammar.noun.plural}</span>
                     </div>
                   )}
 
@@ -209,20 +281,26 @@ export function CardDetailModal({
                     </div>
                   )}
 
-                  {/* Learning Tips */}
-                  {card.back_json.learning_tips.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
-                        {t.today.learningTips}
-                      </div>
-                      <ul className="space-y-2">
-                        {card.back_json.learning_tips.map((tip, i) => (
-                          <li key={i} className="text-text-muted flex items-start gap-2">
-                            <span>💡</span>
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
+                  {/* Synonyms & Antonyms */}
+                  {(card.back_json.synonyms.length > 0 || card.back_json.antonyms.length > 0) && (
+                    <div className="flex flex-wrap gap-2">
+                      {card.back_json.synonyms.map((s, i) => (
+                        <span key={`s-${i}`} className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm">
+                          = {s}
+                        </span>
+                      ))}
+                      {card.back_json.antonyms.map((a, i) => (
+                        <span key={`a-${i}`} className="px-3 py-1 bg-red-50 text-red-700 rounded-lg text-sm">
+                          ≠ {a}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Register note */}
+                  {card.back_json.register_note && (
+                    <div className="p-3 bg-muted/30 rounded-xl text-sm text-text-muted italic">
+                      {card.back_json.register_note}
                     </div>
                   )}
 
