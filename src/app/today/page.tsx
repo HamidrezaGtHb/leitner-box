@@ -257,7 +257,7 @@ export default function TodayPage() {
           >
             <div
               onClick={() => !showAnswer && setShowAnswer(true)}
-              className={`relative w-full min-h-[400px] transition-transform duration-500 cursor-pointer ${!showAnswer ? 'hover:scale-[1.02]' : ''}`}
+              className={`relative w-full min-h-[500px] transition-transform duration-500 cursor-pointer ${!showAnswer ? 'hover:scale-[1.02]' : ''}`}
               style={{
                 transformStyle: 'preserve-3d',
                 transform: showAnswer ? 'rotateY(180deg)' : 'rotateY(0deg)'

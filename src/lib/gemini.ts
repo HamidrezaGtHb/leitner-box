@@ -124,6 +124,7 @@ Return only JSON.`;
 /**
  * Generate the card back JSON for a given term
  * Returns complete CardBackJSON with all fields
+ * Uses smart type detection for optimal flashcard content
  */
 export async function generateCardBack(params: {
   term: string;
@@ -131,25 +132,70 @@ export async function generateCardBack(params: {
   pos?: string;
 }): Promise<CardBackJSON> {
   const prompt = `SYSTEM:
-You are a German language teacher. Produce STRICT JSON only (no markdown). The JSON must match the given schema exactly. Use Persian for meanings and tips, German for examples.
+You are an expert German language tutor and flashcard content designer.
+Produce STRICT JSON only (no markdown). The JSON must match the given schema exactly.
+Use Persian for meanings and tips, German for examples.
 
 USER INPUT:
 term: ${params.term}
 level: ${params.level || 'B1'}
-pos: ${params.pos || 'unknown'}
+pos_hint: ${params.pos || 'auto-detect'}
 
-CONSTRAINTS:
-- Must be accurate. If unsure, set the specific field to null instead of guessing.
-- Use at least 2 German example sentences, each with Persian translation.
-- Include collocations (2-5) that are natural.
-- synonyms/antonyms: 0-4 each (empty array allowed).
-- register_note: mention formality, typical context, and one common mistake if relevant.
-- grammar fields:
-  - noun: article + plural when known.
-  - verb: perfekt auxiliary + Partizip II; include rection (preposition/case) if common; separable if applicable.
-  - adjective: comparative/superlative if common.
-- meaning_fa: 1-3 concise items.
-- learning_tips: 2-4 short Persian tips.
+────────────────
+YOUR TASK:
+1. First, IDENTIFY the type of the given item automatically:
+   - Verb
+   - Noun (Nomen)
+   - Adjective (Adjektiv)
+   - Noun-Verb Combination (Nomen-Verb-Verbindung)
+   - Fixed Phrase / Expression
+
+2. Then, generate ONLY the relevant information for that type.
+   Do NOT include unnecessary sections.
+   Keep the output compact, clear, and optimized for flashcard learning.
+
+────────────────
+FORMAT RULES:
+- Short, learner-friendly explanations
+- Focus on everyday spoken and written German (B1–C1)
+- No linguistic theory or long explanations
+- Examples must sound natural (daily usage)
+- Do NOT repeat the word unnecessarily
+
+────────────────
+TYPE-SPECIFIC RULES:
+
+1️⃣ IF VERB:
+- grammar.verb: praeteritum (3rd person singular), perfekt_aux, partizip2
+- grammar.verb.rektion: Common preposition + case (e.g., "auf + Akk") with 1 short example
+- synonyms: 1-2 common synonyms
+- examples: 1-2 natural sentences (daily life)
+- collocations: common verb collocations
+
+2️⃣ IF NOUN:
+- grammar.noun: article (der/die/das), plural form
+- collocations: typical prepositions or fixed usage
+- synonyms: 1-2 related nouns
+- examples: 1 natural sentence
+
+3️⃣ IF ADJECTIVE:
+- grammar.adjective: comparative, superlative
+- synonyms OR antonyms: 1-2 useful ones
+- examples: 1 natural sentence
+
+4️⃣ IF NOUN-VERB COMBINATION OR PHRASE:
+- meaning_fa: Simple and clear meaning
+- register_note: Verb used in the construction, common variations
+- synonyms: 1-2 synonymous expressions or alternative phrases
+- examples: 1-2 natural sentences in context
+
+────────────────
+IMPORTANT:
+- If a section is not relevant for the word type, use null or empty array.
+- Output must be clean, structured, and ready to be shown on a flashcard.
+- meaning_fa: 1-2 concise Persian meanings
+- meaning_en: 1-2 concise English meanings
+- learning_tips: 1-2 short Persian tips (only if genuinely helpful)
 
 OUTPUT JSON SCHEMA:
 {
