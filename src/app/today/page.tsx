@@ -340,10 +340,73 @@ export default function TodayPage() {
                       </div>
                     )}
 
-                    {/* Grammar */}
-                    {currentCard.back_json.grammar.noun?.plural && (
-                      <div className="text-sm text-text-muted">
-                        <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                    {/* Grammar Info */}
+                    <div className="space-y-2 text-sm">
+                      {/* IPA */}
+                      {currentCard.back_json.ipa && (
+                        <div className="text-text-muted">
+                          <span className="font-mono text-accent">[{currentCard.back_json.ipa}]</span>
+                        </div>
+                      )}
+
+                      {/* Noun: Plural */}
+                      {currentCard.back_json.grammar.noun?.plural && (
+                        <div className="text-text-muted">
+                          <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                        </div>
+                      )}
+
+                      {/* Verb: Präteritum, Perfekt, Rektion */}
+                      {currentCard.back_json.grammar.verb && (
+                        <div className="flex flex-wrap gap-2 text-text-muted">
+                          {currentCard.back_json.grammar.verb.praeteritum && (
+                            <span className="px-2 py-0.5 bg-surface-2 rounded">
+                              Prät: <span className="text-text">{currentCard.back_json.grammar.verb.praeteritum}</span>
+                            </span>
+                          )}
+                          {currentCard.back_json.grammar.verb.partizip2 && (
+                            <span className="px-2 py-0.5 bg-surface-2 rounded">
+                              Perf: <span className="text-text">{currentCard.back_json.grammar.verb.perfekt_aux} {currentCard.back_json.grammar.verb.partizip2}</span>
+                            </span>
+                          )}
+                          {currentCard.back_json.grammar.verb.rektion && (
+                            <span className="px-2 py-0.5 bg-accent/10 rounded text-accent font-medium">
+                              {currentCard.back_json.grammar.verb.rektion}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Adjective: Comparative, Superlative */}
+                      {currentCard.back_json.grammar.adjective && (
+                        <div className="flex flex-wrap gap-2 text-text-muted">
+                          {currentCard.back_json.grammar.adjective.comparative && (
+                            <span className="px-2 py-0.5 bg-surface-2 rounded">
+                              Komp: <span className="text-text">{currentCard.back_json.grammar.adjective.comparative}</span>
+                            </span>
+                          )}
+                          {currentCard.back_json.grammar.adjective.superlative && (
+                            <span className="px-2 py-0.5 bg-surface-2 rounded">
+                              Sup: <span className="text-text">{currentCard.back_json.grammar.adjective.superlative}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Collocations */}
+                    {currentCard.back_json.collocations.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
+                          {t.today.collocations}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentCard.back_json.collocations.slice(0, 4).map((col, i) => (
+                            <span key={i} className="px-2 py-1 bg-surface-2 rounded-lg text-sm text-text">
+                              {col}
+                            </span>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>

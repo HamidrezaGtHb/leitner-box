@@ -9,7 +9,7 @@ export const NewTermResponseSchema = z.object({
   term: z.string().min(1, 'Term is required'),
   term_normalized: z.string().min(1, 'Normalized term is required'),
   level: z.enum(['A1', 'A2', 'B1', 'B2', 'C1', 'C2']),
-  pos: z.enum(['noun', 'verb', 'adjective', 'adverb', 'phrase', 'other']),
+  pos: z.enum(['noun', 'verb', 'adjective', 'adverb', 'phrase', 'nomen-verb', 'other']),
   topic: z.string().nullable(),
   reason: z.string().min(1, 'Reason is required'),
 });
@@ -24,7 +24,7 @@ export const CardBackResponseSchema = z.object({
   term: z.string().min(1),
   language: z.literal('de'),
   level: z.string(),
-  pos: z.enum(['noun', 'verb', 'adjective', 'adverb', 'phrase', 'other']),
+  pos: z.enum(['noun', 'verb', 'adjective', 'adverb', 'phrase', 'nomen-verb', 'other']),
   ipa: z.string().nullable(),
   meaning_fa: z.array(z.string()).min(1, 'At least one Persian meaning required'),
   meaning_en: z.array(z.string()),

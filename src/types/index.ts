@@ -1,4 +1,4 @@
-export type POS = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'other';
+export type POS = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'nomen-verb' | 'other';
 
 export type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 

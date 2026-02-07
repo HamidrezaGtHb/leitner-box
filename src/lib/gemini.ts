@@ -147,7 +147,7 @@ YOUR TASK:
    - Verb
    - Noun (Nomen)
    - Adjective (Adjektiv)
-   - Noun-Verb Combination (Nomen-Verb-Verbindung)
+   - Nomen-Verb Verbindung (e.g., "Bescheid geben", "in Frage stellen")
    - Fixed Phrase / Expression
 
 2. Then, generate ONLY the relevant information for that type.
@@ -161,32 +161,44 @@ FORMAT RULES:
 - No linguistic theory or long explanations
 - Examples must sound natural (daily usage)
 - Do NOT repeat the word unnecessarily
+- ALWAYS include collocations (2-4 items) - this is REQUIRED
 
 ────────────────
 TYPE-SPECIFIC RULES:
 
 1️⃣ IF VERB:
 - grammar.verb: praeteritum (3rd person singular), perfekt_aux, partizip2
-- grammar.verb.rektion: Common preposition + case (e.g., "auf + Akk") with 1 short example
+- grammar.verb.rektion: Common preposition + case (e.g., "auf + Akk") - IMPORTANT
+- grammar.verb.separable: true/false if applicable
 - synonyms: 1-2 common synonyms
 - examples: 1-2 natural sentences (daily life)
-- collocations: common verb collocations
+- collocations: 2-4 common verb collocations (REQUIRED)
 
 2️⃣ IF NOUN:
 - grammar.noun: article (der/die/das), plural form
-- collocations: typical prepositions or fixed usage
+- collocations: 2-4 typical prepositions or fixed usage (REQUIRED)
 - synonyms: 1-2 related nouns
 - examples: 1 natural sentence
 
 3️⃣ IF ADJECTIVE:
 - grammar.adjective: comparative, superlative
 - synonyms OR antonyms: 1-2 useful ones
+- collocations: 2-4 common adjective + noun combinations (REQUIRED)
 - examples: 1 natural sentence
 
-4️⃣ IF NOUN-VERB COMBINATION OR PHRASE:
+4️⃣ IF NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
 - meaning_fa: Simple and clear meaning
-- register_note: Verb used in the construction, common variations
-- synonyms: 1-2 synonymous expressions or alternative phrases
+- grammar.verb: Include the verb conjugation info
+- register_note: Common variations or alternative forms
+- synonyms: 1-2 synonymous expressions
+- collocations: 2-4 related expressions (REQUIRED)
+- examples: 1-2 natural sentences in context
+
+5️⃣ IF PHRASE/EXPRESSION:
+- meaning_fa: Simple and clear meaning
+- register_note: Context of usage (formal/informal)
+- synonyms: 1-2 synonymous expressions
+- collocations: 2-4 related phrases (REQUIRED)
 - examples: 1-2 natural sentences in context
 
 ────────────────
@@ -195,14 +207,15 @@ IMPORTANT:
 - Output must be clean, structured, and ready to be shown on a flashcard.
 - meaning_fa: 1-2 concise Persian meanings
 - meaning_en: 1-2 concise English meanings
-- learning_tips: 1-2 short Persian tips (only if genuinely helpful)
+- collocations: ALWAYS include 2-4 items (REQUIRED for all types)
+- learning_tips: Set to empty array [] (not used)
 
 OUTPUT JSON SCHEMA:
 {
   "term": "string",
   "language": "de",
   "level": "string",
-  "pos": "noun|verb|adjective|adverb|phrase|other",
+  "pos": "noun|verb|adjective|adverb|phrase|nomen-verb|other",
   "ipa": "string|null",
   "meaning_fa": ["string"],
   "meaning_en": ["string"],

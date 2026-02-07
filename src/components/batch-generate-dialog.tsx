@@ -120,11 +120,12 @@ export function BatchGenerateDialog({
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 disabled={generating}
               >
-                <option value="noun">Noun</option>
+                <option value="noun">Noun (Nomen)</option>
                 <option value="verb">Verb</option>
-                <option value="adjective">Adjective</option>
+                <option value="adjective">Adjective (Adjektiv)</option>
                 <option value="adverb">Adverb</option>
-                <option value="phrase">Phrase</option>
+                <option value="nomen-verb">Nomen-Verb Verbindung</option>
+                <option value="phrase">Phrase / Expression</option>
                 <option value="other">Other</option>
               </select>
             </div>
