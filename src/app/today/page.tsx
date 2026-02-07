@@ -302,111 +302,148 @@ export default function TodayPage() {
                 }}
               >
                 <CardContent className="flex-1 flex flex-col overflow-hidden">
-                  {/* Term */}
-                  <div className="text-center pb-4 border-b mb-4 shrink-0">
-                    <div className="flex items-center justify-center gap-2 mb-2">
+                  {/* Term Header */}
+                  <div className="text-center pb-3 border-b mb-3 shrink-0">
+                    <div className="flex items-center justify-center gap-2 mb-1">
                       {article && <ArticleBadge article={article} size="md" />}
                       <span className="text-2xl font-bold text-text">{currentCard.term}</span>
                       <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
                     </div>
+                    {currentCard.back_json.ipa && (
+                      <span className="font-mono text-xs text-accent">[{currentCard.back_json.ipa}]</span>
+                    )}
                   </div>
 
-                  {/* Answer content */}
-                  <div className="flex-1 space-y-4 overflow-y-auto">
+                  {/* Scrollable Content */}
+                  <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                     {/* Meanings */}
                     <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                         {t.today.meanings}
                       </div>
-                      <ul className="space-y-1">
+                      <ul className="space-y-0.5">
                         {currentCard.back_json.meaning_fa.map((meaning, i) => (
-                          <li key={i} className="text-text text-lg">{meaning}</li>
+                          <li key={i} className="text-text text-base">• {meaning}</li>
                         ))}
                       </ul>
                     </div>
 
-                    {/* Examples */}
-                    {currentCard.back_json.examples.length > 0 && (
-                      <div>
-                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
-                          {t.today.examples}
-                        </div>
-                        {currentCard.back_json.examples.slice(0, 2).map((ex, i) => (
-                          <div key={i} className="mb-2 p-3 bg-surface-2 rounded-xl">
-                            <div className="text-text font-medium">{ex.de}</div>
-                            <div className="text-text-muted text-sm">{ex.fa}</div>
+                    {/* Grammar: Noun */}
+                    {currentCard.back_json.grammar.noun?.plural && (
+                      <div className="text-sm text-text-muted">
+                        <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
+                      </div>
+                    )}
+
+                    {/* Grammar: Verb */}
+                    {currentCard.back_json.grammar.verb && (
+                      <div className="flex flex-wrap gap-1.5 text-xs">
+                        {currentCard.back_json.grammar.verb.prasens && (
+                          <span className="px-2 py-0.5 bg-surface-2 rounded text-text-muted">
+                            Präs: <span className="text-text font-medium">{currentCard.back_json.grammar.verb.prasens}</span>
+                          </span>
+                        )}
+                        {currentCard.back_json.grammar.verb.praeteritum && (
+                          <span className="px-2 py-0.5 bg-surface-2 rounded text-text-muted">
+                            Prät: <span className="text-text font-medium">{currentCard.back_json.grammar.verb.praeteritum}</span>
+                          </span>
+                        )}
+                        {currentCard.back_json.grammar.verb.partizip2 && (
+                          <span className="px-2 py-0.5 bg-surface-2 rounded text-text-muted">
+                            Perf: <span className="text-text font-medium">{currentCard.back_json.grammar.verb.perfekt_aux} {currentCard.back_json.grammar.verb.partizip2}</span>
+                          </span>
+                        )}
+                        {currentCard.back_json.grammar.verb.separable && (
+                          <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded font-medium">
+                            Trennbar
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Grammar: Adjective */}
+                    {currentCard.back_json.grammar.adjective && (
+                      <div className="flex flex-wrap gap-1.5 text-xs">
+                        {currentCard.back_json.grammar.adjective.comparative && (
+                          <span className="px-2 py-0.5 bg-surface-2 rounded text-text-muted">
+                            Komp: <span className="text-text font-medium">{currentCard.back_json.grammar.adjective.comparative}</span>
+                          </span>
+                        )}
+                        {currentCard.back_json.grammar.adjective.superlative && (
+                          <span className="px-2 py-0.5 bg-surface-2 rounded text-text-muted">
+                            Sup: <span className="text-text font-medium">{currentCard.back_json.grammar.adjective.superlative}</span>
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Prepositions */}
+                    {currentCard.back_json.grammar.prepositions && currentCard.back_json.grammar.prepositions.length > 0 && (
+                      <div className="space-y-1">
+                        {currentCard.back_json.grammar.prepositions.map((prep, i) => (
+                          <div key={i} className="text-xs p-2 bg-accent/5 rounded-lg">
+                            <span className="font-bold text-accent">{prep.preposition} + {prep.case}</span>
+                            <span className="text-text-muted ml-2">{prep.example}</span>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Grammar Info */}
-                    <div className="space-y-2 text-sm">
-                      {/* IPA */}
-                      {currentCard.back_json.ipa && (
-                        <div className="text-text-muted">
-                          <span className="font-mono text-accent">[{currentCard.back_json.ipa}]</span>
+                    {/* Examples with Register badges */}
+                    {currentCard.back_json.examples.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                          {t.today.examples}
                         </div>
-                      )}
-
-                      {/* Noun: Plural */}
-                      {currentCard.back_json.grammar.noun?.plural && (
-                        <div className="text-text-muted">
-                          <strong className="text-text">{t.common.plural}:</strong> {currentCard.back_json.grammar.noun.plural}
-                        </div>
-                      )}
-
-                      {/* Verb: Präteritum, Perfekt, Rektion */}
-                      {currentCard.back_json.grammar.verb && (
-                        <div className="flex flex-wrap gap-2 text-text-muted">
-                          {currentCard.back_json.grammar.verb.praeteritum && (
-                            <span className="px-2 py-0.5 bg-surface-2 rounded">
-                              Prät: <span className="text-text">{currentCard.back_json.grammar.verb.praeteritum}</span>
-                            </span>
-                          )}
-                          {currentCard.back_json.grammar.verb.partizip2 && (
-                            <span className="px-2 py-0.5 bg-surface-2 rounded">
-                              Perf: <span className="text-text">{currentCard.back_json.grammar.verb.perfekt_aux} {currentCard.back_json.grammar.verb.partizip2}</span>
-                            </span>
-                          )}
-                          {currentCard.back_json.grammar.verb.rektion && (
-                            <span className="px-2 py-0.5 bg-accent/10 rounded text-accent font-medium">
-                              {currentCard.back_json.grammar.verb.rektion}
-                            </span>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Adjective: Comparative, Superlative */}
-                      {currentCard.back_json.grammar.adjective && (
-                        <div className="flex flex-wrap gap-2 text-text-muted">
-                          {currentCard.back_json.grammar.adjective.comparative && (
-                            <span className="px-2 py-0.5 bg-surface-2 rounded">
-                              Komp: <span className="text-text">{currentCard.back_json.grammar.adjective.comparative}</span>
-                            </span>
-                          )}
-                          {currentCard.back_json.grammar.adjective.superlative && (
-                            <span className="px-2 py-0.5 bg-surface-2 rounded">
-                              Sup: <span className="text-text">{currentCard.back_json.grammar.adjective.superlative}</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                        {currentCard.back_json.examples.slice(0, 3).map((ex, i) => (
+                          <div key={i} className="mb-1.5 p-2.5 bg-surface-2 rounded-xl">
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1">
+                                <div className="text-text font-medium text-sm">{ex.de}</div>
+                                <div className="text-text-muted text-xs">{ex.fa}</div>
+                              </div>
+                              {ex.register && ex.register !== 'general' && (
+                                <span className={`shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                                  ex.register === 'formal' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'
+                                }`}>
+                                  {ex.register === 'formal' ? 'Formell' : 'Umgangs.'}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
                     {/* Collocations */}
                     {currentCard.back_json.collocations.length > 0 && (
                       <div>
-                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-2">
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
                           {t.today.collocations}
                         </div>
                         <div className="flex flex-wrap gap-1.5">
                           {currentCard.back_json.collocations.slice(0, 4).map((col, i) => (
-                            <span key={i} className="px-2 py-1 bg-surface-2 rounded-lg text-sm text-text">
+                            <span key={i} className="px-2 py-0.5 bg-surface-2 rounded-lg text-xs text-text">
                               {col}
                             </span>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* Synonyms & Antonyms */}
+                    {(currentCard.back_json.synonyms.length > 0 || currentCard.back_json.antonyms.length > 0) && (
+                      <div className="flex flex-wrap gap-1.5 text-xs">
+                        {currentCard.back_json.synonyms.map((s, i) => (
+                          <span key={`s-${i}`} className="px-2 py-0.5 bg-green-50 text-green-700 rounded">
+                            = {s}
+                          </span>
+                        ))}
+                        {currentCard.back_json.antonyms.map((a, i) => (
+                          <span key={`a-${i}`} className="px-2 py-0.5 bg-red-50 text-red-700 rounded">
+                            ≠ {a}
+                          </span>
+                        ))}
                       </div>
                     )}
                   </div>

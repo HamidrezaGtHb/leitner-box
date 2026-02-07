@@ -1,6 +1,8 @@
-export type POS = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'nomen-verb' | 'other';
+export type POS = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'nomen-verb' | 'idiom' | 'other';
 
 export type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
+
+export type Register = 'formal' | 'informal' | 'general';
 
 export interface CardBackJSON {
   term: string;
@@ -14,6 +16,7 @@ export interface CardBackJSON {
     de: string;
     fa: string;
     note: string | null;
+    register?: Register;
   }>;
   synonyms: string[];
   antonyms: string[];
@@ -28,6 +31,7 @@ export interface CardBackJSON {
       perfekt_aux: 'haben' | 'sein' | null;
       partizip2: string | null;
       praeteritum: string | null;
+      prasens?: string | null;
       rektion: string | null;
       valency: string | null;
       separable: boolean | null;
@@ -36,6 +40,11 @@ export interface CardBackJSON {
       comparative: string | null;
       superlative: string | null;
     };
+    prepositions?: Array<{
+      preposition: string;
+      case: string;
+      example: string;
+    }>;
   };
   learning_tips: string[];
 }

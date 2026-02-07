@@ -101,7 +101,9 @@ Rules:
 - If pos is noun: give singular form (not plural) as "term".
 - If pos is verb: give infinitive as "term".
 - If pos is adjective/adverb: base form as "term".
-- If pos is phrase: keep it short (<= 6 words).
+- If pos is phrase/idiom: keep it short (<= 6 words).
+- If pos is nomen-verb: give the full combination (e.g. "Bescheid geben").
+- If pos is idiom: give a common German idiom/Redewendung.
 
 Normalization rule for checking duplicates:
 lowercase, trim, collapse spaces to one, remove surrounding punctuation.
@@ -111,7 +113,7 @@ OUTPUT JSON SCHEMA:
   "term": "string",
   "term_normalized": "string",
   "level": "string",
-  "pos": "noun|verb|adjective|adverb|phrase|other",
+  "pos": "noun|verb|adjective|adverb|phrase|nomen-verb|idiom|other",
   "topic": "string|null",
   "reason": "short Persian explanation why this term fits level and usefulness"
 }
@@ -132,9 +134,9 @@ export async function generateCardBack(params: {
   pos?: string;
 }): Promise<CardBackJSON> {
   const prompt = `SYSTEM:
-You are an expert German language tutor and flashcard content designer.
-Produce STRICT JSON only (no markdown). The JSON must match the given schema exactly.
-Use Persian for meanings and tips, German for examples.
+You are a German Language Database and expert flashcard content designer.
+Output ONLY valid JSON (no markdown, no commentary). The JSON must match the schema exactly.
+Use Persian for meanings, German for examples.
 
 USER INPUT:
 term: ${params.term}
@@ -142,94 +144,83 @@ level: ${params.level || 'B1'}
 pos_hint: ${params.pos || 'auto-detect'}
 
 ────────────────
-YOUR TASK:
-1. First, IDENTIFY the type of the given item automatically:
-   - Verb
-   - Noun (Nomen)
-   - Adjective (Adjektiv)
-   - Nomen-Verb Verbindung (e.g., "Bescheid geben", "in Frage stellen")
-   - Fixed Phrase / Expression
-
-2. Then, generate ONLY the relevant information for that type.
-   Do NOT include unnecessary sections.
-   Keep the output compact, clear, and optimized for flashcard learning.
+TASK:
+1. IDENTIFY the type: Verb, Noun, Adjective, Adverb, Nomen-Verb Verbindung, Idiom, or Phrase.
+2. Generate ONLY relevant info for that type. Omit irrelevant sections.
 
 ────────────────
-FORMAT RULES:
-- Short, learner-friendly explanations
-- Focus on everyday spoken and written German (B1–C1)
-- No linguistic theory or long explanations
-- Examples must sound natural (daily usage)
-- Do NOT repeat the word unnecessarily
-- ALWAYS include collocations (2-4 items) - this is REQUIRED
+RULES:
+- Practical, everyday German (B1–C1)
+- Examples must sound natural
+- ALWAYS include collocations (2-4 items) — REQUIRED
+- Each example MUST have a "register" field: "formal", "informal", or "general"
+- learning_tips: always empty array []
 
 ────────────────
-TYPE-SPECIFIC RULES:
+TYPE-SPECIFIC:
 
-1️⃣ IF VERB:
-- grammar.verb: praeteritum (3rd person singular), perfekt_aux, partizip2
-- grammar.verb.rektion: Common preposition + case (e.g., "auf + Akk") - IMPORTANT
-- grammar.verb.separable: true/false if applicable
-- synonyms: 1-2 common synonyms
-- examples: 1-2 natural sentences (daily life)
-- collocations: 2-4 common verb collocations (REQUIRED)
+VERB:
+- grammar.verb: prasens (3rd person singular, e.g. "er wartet"), praeteritum, perfekt_aux, partizip2, separable
+- grammar.prepositions: Array of {preposition, case, example} — e.g. [{"preposition":"auf","case":"Akk","example":"Ich warte auf den Bus."}]
+- synonyms: 1-2
+- examples: 1-2 (with register tag)
+- collocations: 2-4
 
-2️⃣ IF NOUN:
-- grammar.noun: article (der/die/das), plural form
-- collocations: 2-4 typical prepositions or fixed usage (REQUIRED)
-- synonyms: 1-2 related nouns
-- examples: 1 natural sentence
+NOUN:
+- grammar.noun: article (der/die/das), plural
+- grammar.prepositions: if the noun has typical preposition usage
+- synonyms: 1-2
+- examples: 1 (with register tag)
+- collocations: 2-4
 
-3️⃣ IF ADJECTIVE:
+ADJECTIVE:
 - grammar.adjective: comparative, superlative
-- synonyms OR antonyms: 1-2 useful ones
-- collocations: 2-4 common adjective + noun combinations (REQUIRED)
-- examples: 1 natural sentence
+- synonyms OR antonyms: 1-2
+- examples: 1 (with register tag)
+- collocations: 2-4
 
-4️⃣ IF NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
-- meaning_fa: Simple and clear meaning
-- grammar.verb: Include the verb conjugation info
-- register_note: Common variations or alternative forms
-- synonyms: 1-2 synonymous expressions
-- collocations: 2-4 related expressions (REQUIRED)
-- examples: 1-2 natural sentences in context
+NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
+- grammar.verb: verb conjugation info
+- register_note: variations/alternative forms
+- synonyms: 1-2 alternative expressions
+- examples: 1-2 (with register tag)
+- collocations: 2-4
 
-5️⃣ IF PHRASE/EXPRESSION:
-- meaning_fa: Simple and clear meaning
-- register_note: Context of usage (formal/informal)
-- synonyms: 1-2 synonymous expressions
-- collocations: 2-4 related phrases (REQUIRED)
-- examples: 1-2 natural sentences in context
+IDIOM (pos: "idiom"):
+- meaning_fa: clear explanation
+- register_note: origin or context
+- synonyms: 1-2 equivalent expressions
+- examples: 1-2 (with register tag)
+- collocations: 2-4
+
+PHRASE (pos: "phrase"):
+- register_note: formal/informal context
+- synonyms: 1-2 alternatives
+- examples: 1-2 (with register tag)
+- collocations: 2-4
 
 ────────────────
-IMPORTANT:
-- If a section is not relevant for the word type, use null or empty array.
-- Output must be clean, structured, and ready to be shown on a flashcard.
-- meaning_fa: 1-2 concise Persian meanings
-- meaning_en: 1-2 concise English meanings
-- collocations: ALWAYS include 2-4 items (REQUIRED for all types)
-- learning_tips: Set to empty array [] (not used)
-
 OUTPUT JSON SCHEMA:
 {
   "term": "string",
   "language": "de",
   "level": "string",
-  "pos": "noun|verb|adjective|adverb|phrase|nomen-verb|other",
+  "pos": "noun|verb|adjective|adverb|phrase|nomen-verb|idiom|other",
   "ipa": "string|null",
   "meaning_fa": ["string"],
   "meaning_en": ["string"],
-  "examples": [{"de":"string","fa":"string","note":"string|null"}],
+  "examples": [{"de":"string","fa":"string","note":"string|null","register":"formal|informal|general"}],
   "synonyms": ["string"],
   "antonyms": ["string"],
   "collocations": ["string"],
   "register_note": "string|null",
   "grammar": {
     "noun": {"article":"der|die|das|null","plural":"string|null"},
-    "verb": {"perfekt_aux":"haben|sein|null","partizip2":"string|null","praeteritum":"string|null","rektion":"string|null","valency":"string|null","separable":"boolean|null"},
-    "adjective": {"comparative":"string|null","superlative":"string|null"}
+    "verb": {"perfekt_aux":"haben|sein|null","partizip2":"string|null","praeteritum":"string|null","prasens":"string|null","rektion":"string|null","valency":"string|null","separable":"boolean|null"},
+    "adjective": {"comparative":"string|null","superlative":"string|null"},
+    "prepositions": [{"preposition":"string","case":"string","example":"string"}]
   },
-  "learning_tips": ["string"]
+  "learning_tips": []
 }
 
 Return only JSON.`;
