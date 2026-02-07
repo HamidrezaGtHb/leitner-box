@@ -9,6 +9,11 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: '40Tagen',
   description: 'Learn German vocabulary with Leitner system',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: '40Tagen',
+  },
 };
 
 export default function RootLayout({
