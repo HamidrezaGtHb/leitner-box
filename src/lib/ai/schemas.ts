@@ -45,6 +45,8 @@ export const CardBackResponseSchema = z.object({
   antonyms: z.array(z.string()),
   collocations: z.array(z.string()),
   register_note: z.string().nullable(),
+  word_family: z.array(z.string()).optional(),
+  common_mistakes: z.array(z.string()).optional(),
   grammar: z.object({
     noun: z
       .object({

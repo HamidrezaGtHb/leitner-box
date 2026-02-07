@@ -446,6 +446,36 @@ export default function TodayPage() {
                         ))}
                       </div>
                     )}
+
+                    {/* Word Family */}
+                    {currentCard.back_json.word_family && currentCard.back_json.word_family.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                          {t.today.wordFamily}
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {currentCard.back_json.word_family.map((word, i) => (
+                            <span key={i} className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded-lg text-xs">
+                              {word}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Common Mistakes */}
+                    {currentCard.back_json.common_mistakes && currentCard.back_json.common_mistakes.length > 0 && (
+                      <div>
+                        <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                          {t.today.commonMistakes}
+                        </div>
+                        {currentCard.back_json.common_mistakes.map((mistake, i) => (
+                          <div key={i} className="text-xs p-2 bg-red-50 text-red-700 rounded-lg mb-1">
+                            ⚠ {mistake}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Answer buttons */}

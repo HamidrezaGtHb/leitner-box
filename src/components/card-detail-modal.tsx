@@ -297,6 +297,38 @@ export function CardDetailModal({
                     </div>
                   )}
 
+                  {/* Word Family */}
+                  {card.back_json.word_family && card.back_json.word_family.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                        {t.today.wordFamily}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {card.back_json.word_family.map((word, i) => (
+                          <span key={i} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm">
+                            {word}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Common Mistakes */}
+                  {card.back_json.common_mistakes && card.back_json.common_mistakes.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                        {t.today.commonMistakes}
+                      </div>
+                      <div className="space-y-2">
+                        {card.back_json.common_mistakes.map((mistake, i) => (
+                          <div key={i} className="p-3 bg-red-50 text-red-700 rounded-xl text-sm">
+                            ⚠ {mistake}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Register note */}
                   {card.back_json.register_note && (
                     <div className="p-3 bg-muted/30 rounded-xl text-sm text-text-muted italic">

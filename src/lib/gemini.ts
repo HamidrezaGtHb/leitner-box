@@ -153,7 +153,10 @@ RULES:
 - Practical, everyday German (B1–C1)
 - Examples must sound natural
 - ALWAYS include collocations (2-4 items) — REQUIRED
+- ALWAYS include exactly 2 examples (with register tag) — REQUIRED for ALL types
 - Each example MUST have a "register" field: "formal", "informal", or "general"
+- word_family: 2-4 related words from the same word family (e.g. for "fahren" → ["der Fahrer", "die Fahrt", "die Abfahrt", "erfahren"])
+- common_mistakes: 1-2 common mistakes German learners make with this word (in Persian, short and clear)
 - learning_tips: always empty array []
 
 ────────────────
@@ -163,41 +166,51 @@ VERB:
 - grammar.verb: prasens (3rd person singular, e.g. "er wartet"), praeteritum, perfekt_aux, partizip2, separable
 - grammar.prepositions: Array of {preposition, case, example} — e.g. [{"preposition":"auf","case":"Akk","example":"Ich warte auf den Bus."}]
 - synonyms: 1-2
-- examples: 1-2 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- word_family: 2-4 related words
+- common_mistakes: 1-2
 
 NOUN:
 - grammar.noun: article (der/die/das), plural
 - grammar.prepositions: if the noun has typical preposition usage
 - synonyms: 1-2
-- examples: 1 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- word_family: 2-4 related words
+- common_mistakes: 1-2
 
 ADJECTIVE:
 - grammar.adjective: comparative, superlative
 - synonyms OR antonyms: 1-2
-- examples: 1 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- word_family: 2-4 related words
+- common_mistakes: 1-2
 
 NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
 - grammar.verb: verb conjugation info
 - register_note: variations/alternative forms
 - synonyms: 1-2 alternative expressions
-- examples: 1-2 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- word_family: 2-4 related words
+- common_mistakes: 1-2
 
 IDIOM (pos: "idiom"):
 - meaning_fa: clear explanation
 - register_note: origin or context
 - synonyms: 1-2 equivalent expressions
-- examples: 1-2 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- common_mistakes: 1-2
 
 PHRASE (pos: "phrase"):
 - register_note: formal/informal context
 - synonyms: 1-2 alternatives
-- examples: 1-2 (with register tag)
+- examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
+- common_mistakes: 1-2
 
 ────────────────
 OUTPUT JSON SCHEMA:
@@ -214,6 +227,8 @@ OUTPUT JSON SCHEMA:
   "antonyms": ["string"],
   "collocations": ["string"],
   "register_note": "string|null",
+  "word_family": ["string"],
+  "common_mistakes": ["string"],
   "grammar": {
     "noun": {"article":"der|die|das|null","plural":"string|null"},
     "verb": {"perfekt_aux":"haben|sein|null","partizip2":"string|null","praeteritum":"string|null","prasens":"string|null","rektion":"string|null","valency":"string|null","separable":"boolean|null"},

@@ -22,6 +22,8 @@ export interface CardBackJSON {
   antonyms: string[];
   collocations: string[];
   register_note: string | null;
+  word_family?: string[];
+  common_mistakes?: string[];
   grammar: {
     noun?: {
       article: 'der' | 'die' | 'das' | null;
