@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
-import { getNextBox, formatDate, getNextDueDate } from '@/lib/utils';
+import { getNextBox, formatDate, getNextDueDate, calculateAvailableNewCardSlots } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
 import { Button, Card, CardContent, ArticleBadge, CopyButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
@@ -23,6 +23,8 @@ const DEFAULT_SETTINGS: Settings = {
 export default function TodayPage() {
   const [dueCards, setDueCards] = useState<CardType[]>([]);
   const [wordsAddedToday, setWordsAddedToday] = useState(0);
+  const [availableSlots, setAvailableSlots] = useState(0);
+  const [box1DueToday, setBox1DueToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -39,7 +41,7 @@ export default function TodayPage() {
   const { t } = useLanguage();
 
   const dailyLimit = settings.daily_limit || 10;
-  const quotaComplete = wordsAddedToday >= dailyLimit;
+  const quotaComplete = availableSlots === 0;
 
   useEffect(() => {
     loadData();
@@ -69,15 +71,11 @@ export default function TodayPage() {
 
     const today = formatDate(new Date());
 
-    // Count words added today
-    const { count: todayCount } = await supabase
-      .from('cards')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', user.id)
-      .gte('created_at', `${today}T00:00:00`)
-      .lt('created_at', `${today}T23:59:59`);
-
-    setWordsAddedToday(todayCount || 0);
+    // Calculate available slots using the new logic
+    const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
+    setAvailableSlots(slotsData.availableSlots);
+    setBox1DueToday(slotsData.box1Due);
+    setWordsAddedToday(slotsData.box1New);
 
     // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase
@@ -535,7 +533,10 @@ export default function TodayPage() {
                     {quotaComplete ? t.today.quotaComplete : t.today.completeQuotaFirst}
                   </div>
                   <div className="text-sm text-text-muted">
-                    {wordsAddedToday} / {dailyLimit} {t.today.words}
+                    {wordsAddedToday} / {dailyLimit} {t.today.words} {t.today.word}
+                  </div>
+                  <div className="text-xs text-text-muted mt-0.5">
+                    {t.today.availableSlots}: {availableSlots} • {t.today.box1Load}: {box1DueToday}
                   </div>
                 </div>
               </div>

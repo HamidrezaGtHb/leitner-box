@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { BacklogItem } from '@/types';
-import { normalizeTerm } from '@/lib/utils';
+import { normalizeTerm, calculateAvailableNewCardSlots } from '@/lib/utils';
 import { completeBacklogToCardAction } from '@/app/actions/ai-actions';
 import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
 import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
@@ -24,6 +24,8 @@ export default function BacklogPage() {
   const [showCSVDialog, setShowCSVDialog] = useState(false);
   const [showManualDialog, setShowManualDialog] = useState(false);
   const [manualItem, setManualItem] = useState<BacklogItem | null>(null);
+  const [availableSlots, setAvailableSlots] = useState(0);
+  const [dailyLimit, setDailyLimit] = useState(10);
   const supabase = createClient();
   const { t } = useLanguage();
 
@@ -44,6 +46,12 @@ export default function BacklogPage() {
       .order('created_at', { ascending: false });
 
     setBacklog(data || []);
+    
+    // Load available slots
+    const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
+    setAvailableSlots(slotsData.availableSlots);
+    setDailyLimit(slotsData.dailyLimit);
+    
     setLoading(false);
   };
 
@@ -141,7 +149,20 @@ export default function BacklogPage() {
       <Nav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="flex items-center justify-between flex-wrap gap-4">
-          <h1 className="text-2xl font-semibold text-text">{t.backlog.title}</h1>
+          <div>
+            <h1 className="text-2xl font-semibold text-text">{t.backlog.title}</h1>
+            <div className="text-sm text-text-muted mt-1">
+              {availableSlots > 0 ? (
+                <span className="text-success font-medium">
+                  {t.today.availableSlots}: {availableSlots} / {dailyLimit}
+                </span>
+              ) : (
+                <span className="text-warning font-medium">
+                  {t.today.dailyLimitReached}
+                </span>
+              )}
+            </div>
+          </div>
           <div className="flex gap-2 flex-wrap">
             <Button
               variant="primary"
@@ -188,6 +209,21 @@ export default function BacklogPage() {
           </form>
         </Card>
 
+        {/* Warning message if no slots available */}
+        {availableSlots === 0 && backlog.length > 0 && (
+          <Card padding="md" className="border-warning/50 bg-warning/5">
+            <CardContent>
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">⚠️</span>
+                <div>
+                  <div className="font-medium text-text">{t.today.dailyLimitReached}</div>
+                  <div className="text-sm text-text-muted">{t.today.reviewToFreeSlots}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Backlog list */}
         {backlog.length === 0 ? (
           <Card padding="lg" className="text-center py-16">
@@ -229,7 +265,7 @@ export default function BacklogPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => handleConvertToCard(item)}
-                      disabled={converting === item.id}
+                      disabled={converting === item.id || availableSlots === 0}
                       loading={converting === item.id}
                     >
                       ✨ {t.backlog.aiComplete}
@@ -239,7 +275,7 @@ export default function BacklogPage() {
                       size="sm"
                       className="flex-1"
                       onClick={() => handleManualCard(item)}
-                      disabled={converting === item.id}
+                      disabled={converting === item.id || availableSlots === 0}
                     >
                       ✏️ {t.backlog.manual}
                     </Button>

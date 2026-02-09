@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { generateNewTerm, generateCardBack } from '@/lib/gemini';
 import { Level, POS, CardBackJSON } from '@/types';
-import { normalizeTerm } from '@/lib/utils';
+import { normalizeTerm, calculateAvailableNewCardSlots } from '@/lib/utils';
 import { getErrorMessage, ErrorMessages } from '@/lib/errors';
 import type { NewTermResponse } from '@/lib/ai/schemas';
 
@@ -132,6 +132,16 @@ export async function completeBacklogToCardAction(
       return {
         success: false,
         error: ErrorMessages.DB_OPERATION_FAILED.en,
+      };
+    }
+
+    // Check available slots before creating card
+    const { availableSlots } = await calculateAvailableNewCardSlots(supabase, user.id);
+    
+    if (availableSlots <= 0) {
+      return {
+        success: false,
+        error: 'Daily limit reached. Review existing cards first or wait until tomorrow.',
       };
     }
 

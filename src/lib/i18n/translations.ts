@@ -115,6 +115,10 @@ export const translations = {
       boxDistribution: 'Card distribution in boxes',
       words: 'words',
       word: 'word',
+      availableSlots: 'Available slots today',
+      box1Load: 'Box 1 load',
+      dailyLimitReached: 'Daily limit reached',
+      reviewToFreeSlots: 'Review existing cards to free up slots',
     },
 
     // Cards page
@@ -365,6 +369,10 @@ export const translations = {
       boxDistribution: 'Kartenverteilung in Boxen',
       words: 'Wörter',
       word: 'Wort',
+      availableSlots: 'Verfügbare Plätze heute',
+      box1Load: 'Box 1 Belastung',
+      dailyLimitReached: 'Tageslimit erreicht',
+      reviewToFreeSlots: 'Überprüfen Sie vorhandene Karten, um Plätze freizugeben',
     },
 
     // Cards page
