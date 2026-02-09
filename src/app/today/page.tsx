@@ -25,6 +25,7 @@ export default function TodayPage() {
   const [wordsAddedToday, setWordsAddedToday] = useState(0);
   const [availableSlots, setAvailableSlots] = useState(0);
   const [box1DueToday, setBox1DueToday] = useState(0);
+  const [scheduledForToday, setScheduledForToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -76,6 +77,7 @@ export default function TodayPage() {
     setAvailableSlots(slotsData.availableSlots);
     setBox1DueToday(slotsData.box1Due);
     setWordsAddedToday(slotsData.box1New);
+    setScheduledForToday(slotsData.scheduledForToday);
 
     // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase

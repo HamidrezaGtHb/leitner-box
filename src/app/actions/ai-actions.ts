@@ -135,7 +135,18 @@ export async function completeBacklogToCardAction(
       };
     }
 
-    // Check available slots before creating card
+    // Check if backlog item is scheduled for future
+    const today = new Date().toISOString().split('T')[0];
+    const isScheduledForFuture = backlogItem.start_date && backlogItem.start_date > today;
+    
+    if (isScheduledForFuture) {
+      return {
+        success: false,
+        error: `This word is scheduled for ${new Date(backlogItem.start_date).toLocaleDateString()}. You can still learn it, but it's planned for later.`,
+      };
+    }
+    
+    // Check available slots before creating card (only for items due today or past)
     const { availableSlots } = await calculateAvailableNewCardSlots(supabase, user.id);
     
     if (availableSlots <= 0) {

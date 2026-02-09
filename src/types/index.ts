@@ -73,6 +73,7 @@ export interface BacklogItem {
   level: string | null;
   pos: string | null;
   topic: string | null;
+  start_date: string;
   created_at: string;
 }
 
