@@ -544,45 +544,108 @@ export default function TodayPage() {
           <h1 className="text-2xl font-semibold text-text tracking-tight">{t.today.title}</h1>
         </div>
 
-        {/* Daily Word Quota Card */}
-        <Card padding="lg" className={!quotaComplete ? 'border-warning/50 bg-warning/5' : 'border-success/50 bg-success/5'}>
+        {/* Daily Capacity Card */}
+        <Card padding="lg" className="border-accent/30 bg-gradient-to-br from-accent/5 to-transparent">
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="text-2xl">{quotaComplete ? '✅' : '📝'}</span>
+                <span className="text-3xl">🎯</span>
                 <div>
-                  <div className="font-medium text-text">
-                    {quotaComplete ? t.today.quotaComplete : t.today.completeQuotaFirst}
+                  <div className="font-semibold text-lg text-text">
+                    Daily Learning Capacity
                   </div>
-                  <div className="text-sm text-text-muted">
-                    {t.today.box1Load}: {box1DueToday} / {dailyLimit}
-                  </div>
-                  <div className="text-xs text-success font-medium mt-0.5">
-                    {availableSlots > 0 ? (
-                      <>{t.today.availableSlots}: {availableSlots}</>
-                    ) : (
-                      <span className="text-warning">{t.today.dailyLimitReached}</span>
-                    )}
+                  <div className="text-sm text-text-muted mt-1">
+                    Today's workload and available slots
                   </div>
                 </div>
               </div>
-              {!quotaComplete && (
-                <Button
-                  variant="primary"
-                  size="md"
-                  onClick={() => router.push('/backlog')}
-                >
-                  ➕ {t.today.addWord}
-                </Button>
-              )}
+            </div>
+
+            {/* Statistics Grid */}
+            <div className="grid grid-cols-3 gap-3">
+              {/* Daily Limit */}
+              <div className="bg-surface/50 rounded-xl p-3 border border-border">
+                <div className="text-xs text-text-muted uppercase tracking-wide mb-1">
+                  Daily Limit
+                </div>
+                <div className="text-2xl font-bold text-accent">
+                  {dailyLimit}
+                </div>
+                <div className="text-xs text-text-muted mt-0.5">
+                  cards/day
+                </div>
+              </div>
+
+              {/* Box 1 Due Today */}
+              <div className="bg-surface/50 rounded-xl p-3 border border-border">
+                <div className="text-xs text-text-muted uppercase tracking-wide mb-1">
+                  Due Today
+                </div>
+                <div className="text-2xl font-bold text-warning">
+                  {box1DueToday}
+                </div>
+                <div className="text-xs text-text-muted mt-0.5">
+                  need review
+                </div>
+              </div>
+
+              {/* Available Slots */}
+              <div className={`rounded-xl p-3 border ${availableSlots > 0 ? 'bg-success/10 border-success/30' : 'bg-warning/10 border-warning/30'}`}>
+                <div className="text-xs text-text-muted uppercase tracking-wide mb-1">
+                  Available
+                </div>
+                <div className={`text-2xl font-bold ${availableSlots > 0 ? 'text-success' : 'text-warning'}`}>
+                  {availableSlots}
+                </div>
+                <div className="text-xs text-text-muted mt-0.5">
+                  free slots
+                </div>
+              </div>
             </div>
 
             {/* Progress bar */}
-            <div className="h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full transition-all duration-500 ${quotaComplete ? 'bg-success' : 'bg-warning'}`}
-                style={{ width: `${Math.min((box1DueToday / dailyLimit) * 100, 100)}%` }}
-              />
+            <div>
+              <div className="flex items-center justify-between text-xs text-text-muted mb-2">
+                <span>Today's Load</span>
+                <span>{box1DueToday} / {dailyLimit}</span>
+              </div>
+              <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-500 ${box1DueToday === 0 ? 'bg-success' : box1DueToday < dailyLimit ? 'bg-accent' : 'bg-warning'}`}
+                  style={{ width: `${Math.min((box1DueToday / dailyLimit) * 100, 100)}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Action Message */}
+            <div className={`flex items-center gap-3 p-3 rounded-xl ${availableSlots > 0 ? 'bg-success/10' : 'bg-info/10'}`}>
+              <span className="text-xl">{availableSlots > 0 ? '✨' : 'ℹ️'}</span>
+              <div className="flex-1">
+                {availableSlots > 0 ? (
+                  <div className="text-sm">
+                    <span className="font-medium text-success">Great! You can add {availableSlots} more cards today</span>
+                    <div className="text-xs text-text-muted mt-0.5">
+                      New cards will be ready for review tomorrow
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-sm">
+                    <span className="font-medium text-text">Daily limit reached</span>
+                    <div className="text-xs text-text-muted mt-0.5">
+                      Review today's cards to free up slots for tomorrow
+                    </div>
+                  </div>
+                )}
+              </div>
+              {availableSlots > 0 && (
+                <Button
+                  variant="success"
+                  size="md"
+                  onClick={() => router.push('/backlog')}
+                >
+                  ➕ Add Words
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

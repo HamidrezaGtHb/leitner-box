@@ -153,18 +153,18 @@ export default function BacklogPage() {
         <div className="flex items-center justify-between flex-wrap gap-4">
           <div>
             <h1 className="text-2xl font-semibold text-text">{t.backlog.title}</h1>
-            <div className="text-sm text-text-muted mt-1">
-              <span className="text-text-muted">Box 1: {box1DueToday} / {dailyLimit}</span>
-              {' • '}
-              {availableSlots > 0 ? (
-                <span className="text-success font-medium">
-                  {availableSlots} slots available
+            <div className="flex items-center gap-4 mt-2">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-surface rounded-lg border border-border">
+                <span className="text-xs text-text-muted">Due Today:</span>
+                <span className="text-sm font-semibold text-warning">{box1DueToday}</span>
+                <span className="text-xs text-text-muted">/</span>
+                <span className="text-sm font-semibold text-accent">{dailyLimit}</span>
+              </div>
+              <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${availableSlots > 0 ? 'bg-success/10 border-success/30' : 'bg-warning/10 border-warning/30'}`}>
+                <span className={`text-xs font-medium ${availableSlots > 0 ? 'text-success' : 'text-warning'}`}>
+                  {availableSlots > 0 ? `✓ ${availableSlots} slots available` : '⚠ Limit reached'}
                 </span>
-              ) : (
-                <span className="text-warning font-medium">
-                  Daily limit reached
-                </span>
-              )}
+              </div>
             </div>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -214,16 +214,27 @@ export default function BacklogPage() {
         </Card>
 
         {/* Info message */}
-        {availableSlots === 0 && backlog.length > 0 && (
-          <Card padding="md" className="border-info/50 bg-info/5">
+        {backlog.length > 0 && (
+          <Card padding="md" className={availableSlots === 0 ? "border-warning/50 bg-warning/5" : "border-success/50 bg-success/5"}>
             <CardContent>
               <div className="flex items-center gap-3">
-                <span className="text-2xl">ℹ️</span>
-                <div>
-                  <div className="font-medium text-text">Daily limit reached</div>
-                  <div className="text-sm text-text-muted">
-                    You can still add words to backlog. After tomorrow's review, more slots will be available.
-                  </div>
+                <span className="text-2xl">{availableSlots === 0 ? '⚠️' : '✨'}</span>
+                <div className="flex-1">
+                  {availableSlots === 0 ? (
+                    <>
+                      <div className="font-medium text-text">Daily capacity reached</div>
+                      <div className="text-sm text-text-muted">
+                        You can still add words to backlog. Review today's {box1DueToday} cards to free up slots for tomorrow.
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="font-medium text-text">Ready to create cards!</div>
+                      <div className="text-sm text-text-muted">
+                        You can create {availableSlots} new cards today. They'll be ready for review tomorrow.
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </CardContent>
