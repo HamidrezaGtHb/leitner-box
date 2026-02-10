@@ -258,38 +258,143 @@ export default function SettingsPage() {
       <div className="max-w-5xl mx-auto p-4 py-6 space-y-6">
         <h1 className="text-2xl font-semibold text-text tracking-tight">{t.settings.title}</h1>
 
-        {/* Language Settings Card */}
+        {/* 1. Statistics & Report Card */}
         <Card padding="lg">
           <CardHeader>
-            <CardTitle>{t.settings.language}</CardTitle>
+            <CardTitle>📊 {t.settings.statsReport}</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-sm text-text-muted">
-              {t.settings.languageDesc}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant={language === 'en' ? 'primary' : 'secondary'}
-                size="md"
-                onClick={() => handleLanguageChange('en')}
-              >
-                🇬🇧 {t.settings.english}
-              </Button>
-              <Button
-                variant={language === 'de' ? 'primary' : 'secondary'}
-                size="md"
-                onClick={() => handleLanguageChange('de')}
-              >
-                🇩🇪 {t.settings.german}
-              </Button>
+          <CardContent className="space-y-6">
+            {/* Main stats grid */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="text-center p-4 bg-info/10 rounded-xl">
+                <div className="text-3xl font-bold text-info">{stats.totalCards}</div>
+                <div className="text-sm text-text-muted">{t.settings.totalWords}</div>
+              </div>
+              <div className="text-center p-4 bg-success/10 rounded-xl">
+                <div className="text-3xl font-bold text-success">{stats.totalReviews}</div>
+                <div className="text-sm text-text-muted">{t.settings.totalReviews}</div>
+              </div>
+              <div className="text-center p-4 bg-warning/10 rounded-xl">
+                <div className="text-3xl font-bold text-warning">{stats.streak}</div>
+                <div className="text-sm text-text-muted">{t.settings.streak}</div>
+              </div>
+              <div className="text-center p-4 bg-accent/10 rounded-xl">
+                <div className="text-3xl font-bold text-accent">{stats.accuracy}%</div>
+                <div className="text-sm text-text-muted">{t.settings.accuracy}</div>
+              </div>
+            </div>
+
+            {/* Next review timer */}
+            {stats.nextDue && (
+              <div className="p-4 bg-accent/10 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-text">{t.settings.nextReview}</div>
+                    <div className="text-2xl font-bold text-accent">
+                      {stats.nextDue.hoursUntil < 24
+                        ? `${stats.nextDue.hoursUntil} ${t.settings.hoursLater}`
+                        : stats.nextDue.dueDate}
+                    </div>
+                  </div>
+                  <div className="text-4xl">⏰</div>
+                </div>
+              </div>
+            )}
+
+            {/* Box distribution */}
+            <div>
+              <h3 className="text-sm font-medium text-text mb-3">{t.settings.boxDistribution}</h3>
+              <div className="space-y-2">
+                {[1, 2, 3, 4, 5].map((box) => {
+                  const count = stats.boxDistribution[box] || 0;
+                  const percentage = stats.totalCards > 0 ? (count / stats.totalCards) * 100 : 0;
+                  return (
+                    <div key={box} className="flex items-center gap-3">
+                      <div className="w-16 text-sm font-medium text-text-muted">{t.common.box} {box}</div>
+                      <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
+                        <div
+                          className="h-full bg-accent flex items-center justify-end px-2 text-accent-fg text-sm font-medium transition-all"
+                          style={{ width: `${Math.max(percentage, count > 0 ? 10 : 0)}%` }}
+                        >
+                          {count > 0 && count}
+                        </div>
+                      </div>
+                      <div className="w-8 text-sm text-text-muted text-left">{count}</div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Appearance Card */}
+        {/* 2. Learning Settings Card */}
         <Card padding="lg">
           <CardHeader>
-            <CardTitle>{t.settings.appearance}</CardTitle>
+            <CardTitle>⚙️ {t.settings.learningSettings}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Daily Limit */}
+            <div className="space-y-3">
+              <label className="block text-sm font-medium text-text">
+                {t.settings.dailyLimit}
+              </label>
+              <p className="text-sm text-text-muted">
+                {t.settings.dailyLimitDesc}
+              </p>
+              <div className="flex gap-2 flex-wrap">
+                {[5, 10, 15, 20].map((limit) => (
+                  <Button
+                    key={limit}
+                    variant={settings.daily_limit === limit ? 'primary' : 'secondary'}
+                    size="md"
+                    disabled={saving}
+                    onClick={() => saveSettings({ daily_limit: limit })}
+                  >
+                    {limit} {t.common.cards}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Hide Future Cards */}
+            <div className="pt-4 border-t">
+              <Toggle
+                checked={settings.hide_future_cards}
+                onChange={(checked) => saveSettings({ hide_future_cards: checked })}
+                disabled={saving}
+                label={t.settings.hideFutureCards}
+                description={t.settings.hideFutureCardsDesc}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 3. Review Intervals Card */}
+        <Card padding="lg">
+          <CardHeader>
+            <CardTitle>🔄 {t.settings.reviewIntervals}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-text-muted mb-4">
+              {t.settings.reviewIntervalsDesc}
+            </p>
+            <div className="grid grid-cols-5 gap-3">
+              {[1, 2, 3, 4, 5].map((box) => (
+                <div key={box} className="text-center p-4 bg-surface-2 rounded-xl">
+                  <div className="text-xs font-medium text-text-muted mb-2">{t.common.box} {box}</div>
+                  <div className="text-2xl font-bold text-text">{intervals[box]}</div>
+                  <div className="text-xs text-text-muted">{t.settings.day}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 4. Appearance Card */}
+        <Card padding="lg">
+          <CardHeader>
+            <CardTitle>🎨 {t.settings.appearance}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-text-muted">
@@ -314,7 +419,35 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Personal AI API Key Card */}
+        {/* 5. Language Settings Card */}
+        <Card padding="lg">
+          <CardHeader>
+            <CardTitle>🌍 {t.settings.language}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-text-muted">
+              {t.settings.languageDesc}
+            </p>
+            <div className="flex gap-2">
+              <Button
+                variant={language === 'en' ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => handleLanguageChange('en')}
+              >
+                🇬🇧 {t.settings.english}
+              </Button>
+              <Button
+                variant={language === 'de' ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => handleLanguageChange('de')}
+              >
+                🇩🇪 {t.settings.german}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 6. Personal AI API Key Card */}
         <Card padding="lg" className="border-accent/30">
           <CardHeader>
             <CardTitle>🤖 Personal AI API Key</CardTitle>
@@ -416,143 +549,10 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Statistics Card */}
+        {/* 7. How Leitner System Works Card */}
         <Card padding="lg">
           <CardHeader>
-            <CardTitle>{t.settings.statsReport}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Main stats grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-info/10 rounded-xl">
-                <div className="text-3xl font-bold text-info">{stats.totalCards}</div>
-                <div className="text-sm text-text-muted">{t.settings.totalWords}</div>
-              </div>
-              <div className="text-center p-4 bg-success/10 rounded-xl">
-                <div className="text-3xl font-bold text-success">{stats.totalReviews}</div>
-                <div className="text-sm text-text-muted">{t.settings.totalReviews}</div>
-              </div>
-              <div className="text-center p-4 bg-warning/10 rounded-xl">
-                <div className="text-3xl font-bold text-warning">{stats.streak}</div>
-                <div className="text-sm text-text-muted">{t.settings.streak}</div>
-              </div>
-              <div className="text-center p-4 bg-accent/10 rounded-xl">
-                <div className="text-3xl font-bold text-accent">{stats.accuracy}%</div>
-                <div className="text-sm text-text-muted">{t.settings.accuracy}</div>
-              </div>
-            </div>
-
-            {/* Next review timer */}
-            {stats.nextDue && (
-              <div className="p-4 bg-accent/10 rounded-xl">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-text">{t.settings.nextReview}</div>
-                    <div className="text-2xl font-bold text-accent">
-                      {stats.nextDue.hoursUntil < 24
-                        ? `${stats.nextDue.hoursUntil} ${t.settings.hoursLater}`
-                        : stats.nextDue.dueDate}
-                    </div>
-                  </div>
-                  <div className="text-4xl">⏰</div>
-                </div>
-              </div>
-            )}
-
-            {/* Box distribution */}
-            <div>
-              <h3 className="text-sm font-medium text-text mb-3">{t.settings.boxDistribution}</h3>
-              <div className="space-y-2">
-                {[1, 2, 3, 4, 5].map((box) => {
-                  const count = stats.boxDistribution[box] || 0;
-                  const percentage = stats.totalCards > 0 ? (count / stats.totalCards) * 100 : 0;
-                  return (
-                    <div key={box} className="flex items-center gap-3">
-                      <div className="w-16 text-sm font-medium text-text-muted">{t.common.box} {box}</div>
-                      <div className="flex-1 h-8 bg-muted rounded-lg overflow-hidden">
-                        <div
-                          className="h-full bg-accent flex items-center justify-end px-2 text-accent-fg text-sm font-medium transition-all"
-                          style={{ width: `${Math.max(percentage, count > 0 ? 10 : 0)}%` }}
-                        >
-                          {count > 0 && count}
-                        </div>
-                      </div>
-                      <div className="w-8 text-sm text-text-muted text-left">{count}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Learning Settings Card */}
-        <Card padding="lg">
-          <CardHeader>
-            <CardTitle>{t.settings.learningSettings}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Daily Limit */}
-            <div className="space-y-3">
-              <label className="block text-sm font-medium text-text">
-                {t.settings.dailyLimit}
-              </label>
-              <p className="text-sm text-text-muted">
-                {t.settings.dailyLimitDesc}
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                {[5, 10, 15, 20].map((limit) => (
-                  <Button
-                    key={limit}
-                    variant={settings.daily_limit === limit ? 'primary' : 'secondary'}
-                    size="md"
-                    disabled={saving}
-                    onClick={() => saveSettings({ daily_limit: limit })}
-                  >
-                    {limit} {t.common.cards}
-                  </Button>
-                ))}
-              </div>
-            </div>
-
-            {/* Hide Future Cards */}
-            <div className="pt-4 border-t">
-              <Toggle
-                checked={settings.hide_future_cards}
-                onChange={(checked) => saveSettings({ hide_future_cards: checked })}
-                disabled={saving}
-                label={t.settings.hideFutureCards}
-                description={t.settings.hideFutureCardsDesc}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Review Intervals Card */}
-        <Card padding="lg">
-          <CardHeader>
-            <CardTitle>{t.settings.reviewIntervals}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-text-muted mb-4">
-              {t.settings.reviewIntervalsDesc}
-            </p>
-            <div className="grid grid-cols-5 gap-3">
-              {[1, 2, 3, 4, 5].map((box) => (
-                <div key={box} className="text-center p-4 bg-surface-2 rounded-xl">
-                  <div className="text-xs font-medium text-text-muted mb-2">{t.common.box} {box}</div>
-                  <div className="text-2xl font-bold text-text">{intervals[box]}</div>
-                  <div className="text-xs text-text-muted">{t.settings.day}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* How it Works Card */}
-        <Card padding="lg">
-          <CardHeader>
-            <CardTitle>{t.settings.howItWorks}</CardTitle>
+            <CardTitle>📚 {t.settings.howItWorks}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2 text-sm text-text">
@@ -563,10 +563,10 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Account Card */}
+        {/* 8. Account & Logout Card */}
         <Card padding="lg">
           <CardHeader>
-            <CardTitle>{t.settings.account}</CardTitle>
+            <CardTitle>👤 {t.settings.account}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-text-muted">
