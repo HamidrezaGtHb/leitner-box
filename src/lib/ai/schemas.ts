@@ -17,9 +17,9 @@ export const NewTermResponseSchema = z.object({
 export type NewTermResponse = z.infer<typeof NewTermResponseSchema>;
 
 /**
- * Register enum for example sentences
+ * Register enum for example sentences and overall term register
  */
-const RegisterEnum = z.enum(['formal', 'informal', 'general']);
+const RegisterEnum = z.enum(['formal', 'informal', 'colloquial', 'general']);
 
 /**
  * Zod schema for Card Back JSON
@@ -46,7 +46,13 @@ export const CardBackResponseSchema = z.object({
   collocations: z.array(z.string()),
   register_note: z.string().nullable(),
   word_family: z.array(z.string()).optional(),
-  common_mistakes: z.array(z.string()).optional(),
+  usage_context: z
+    .object({
+      register: z.enum(['formal', 'informal', 'colloquial']),
+      colloquial_alternative: z.string().nullable().optional(),
+      contexts: z.array(z.string()).optional(),
+    })
+    .optional(),
   grammar: z.object({
     noun: z
       .object({

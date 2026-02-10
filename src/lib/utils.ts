@@ -66,39 +66,23 @@ export function getNextBox(currentBox: number, result: 'correct' | 'wrong'): num
 }
 
 /**
- * Calculate available new card slots for today
- * Formula: dailyLimit - (box1DueToday - box1NewToday) - scheduledForToday
- * This ensures Box 1 never exceeds the daily capacity while allowing future scheduling
+ * Calculate available new card slots for today - Pure Leitner Method
+ * Formula: availableSlots = dailyLimit - box1DueToday
+ * This ensures sustainable daily workload based on cognitive capacity
  */
 export async function calculateAvailableNewCardSlots(
   supabase: any,
   userId: string
-): Promise<{ availableSlots: number; box1Due: number; box1New: number; scheduledForToday: number; dailyLimit: number }> {
+): Promise<{ availableSlots: number; box1DueToday: number; dailyLimit: number }> {
   const today = new Date().toISOString().split('T')[0];
   
-  // Count Box 1 cards due today
-  const { count: box1Due } = await supabase
+  // Count ONLY Box 1 cards due today or in past
+  const { count: box1DueToday } = await supabase
     .from('cards')
     .select('*', { count: 'exact', head: true })
     .eq('user_id', userId)
     .eq('box', 1)
     .lte('due_date', today);
-  
-  // Count Box 1 cards created today
-  const { count: box1New } = await supabase
-    .from('cards')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('box', 1)
-    .gte('created_at', `${today}T00:00:00`)
-    .lt('created_at', `${today}T23:59:59`);
-  
-  // Count backlog items scheduled for today or past (ready to learn)
-  const { count: scheduledForToday } = await supabase
-    .from('backlog')
-    .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .lte('start_date', today);
   
   // Get daily limit from settings
   const { data: settings } = await supabase
@@ -108,14 +92,12 @@ export async function calculateAvailableNewCardSlots(
     .single();
   
   const dailyLimit = settings?.daily_limit || 10;
-  // Available slots = daily limit - current Box 1 load - backlog items scheduled for today
-  const availableSlots = Math.max(0, dailyLimit - ((box1Due || 0) - (box1New || 0)) - (scheduledForToday || 0));
+  // Pure Leitner: Available slots = daily capacity - cards due today
+  const availableSlots = Math.max(0, dailyLimit - (box1DueToday || 0));
   
   return {
     availableSlots,
-    box1Due: box1Due || 0,
-    box1New: box1New || 0,
-    scheduledForToday: scheduledForToday || 0,
+    box1DueToday: box1DueToday || 0,
     dailyLimit,
   };
 }

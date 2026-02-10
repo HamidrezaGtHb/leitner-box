@@ -154,9 +154,13 @@ RULES:
 - Examples must sound natural
 - ALWAYS include collocations (2-4 items) — REQUIRED
 - ALWAYS include exactly 2 examples (with register tag) — REQUIRED for ALL types
-- Each example MUST have a "register" field: "formal", "informal", or "general"
+- Each example MUST have a "register" field: "formal", "informal", or "colloquial"
 - word_family: 2-4 related words from the same word family (e.g. for "fahren" → ["der Fahrer", "die Fahrt", "die Abfahrt", "erfahren"])
-- common_mistakes: 1-2 common mistakes German learners make with this word (in Persian, short and clear)
+- usage_context: {
+    register: "formal" | "informal" | "colloquial" (overall register of this term)
+    colloquial_alternative: "string" (روزمره equivalent if this term is formal, or null)
+    contexts: ["string"] (1-2 situations where this word is used, e.g. ["business", "daily conversation"])
+  }
 - learning_tips: always empty array []
 
 ────────────────
@@ -169,7 +173,7 @@ VERB:
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
 - word_family: 2-4 related words
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 NOUN:
 - grammar.noun: article (der/die/das), plural
@@ -178,7 +182,7 @@ NOUN:
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
 - word_family: 2-4 related words
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 ADJECTIVE:
 - grammar.adjective: comparative, superlative
@@ -186,7 +190,7 @@ ADJECTIVE:
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
 - word_family: 2-4 related words
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
 - grammar.verb: verb conjugation info
@@ -195,7 +199,7 @@ NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
 - word_family: 2-4 related words
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 IDIOM (pos: "idiom"):
 - meaning_fa: clear explanation
@@ -203,14 +207,14 @@ IDIOM (pos: "idiom"):
 - synonyms: 1-2 equivalent expressions
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 PHRASE (pos: "phrase"):
 - register_note: formal/informal context
 - synonyms: 1-2 alternatives
 - examples: 2 (with register tag) — REQUIRED
 - collocations: 2-4
-- common_mistakes: 1-2
+- usage_context: register, colloquial_alternative (if formal), contexts
 
 ────────────────
 OUTPUT JSON SCHEMA:
@@ -222,13 +226,17 @@ OUTPUT JSON SCHEMA:
   "ipa": "string|null",
   "meaning_fa": ["string"],
   "meaning_en": ["string"],
-  "examples": [{"de":"string","fa":"string","note":"string|null","register":"formal|informal|general"}],
+  "examples": [{"de":"string","fa":"string","note":"string|null","register":"formal|informal|colloquial"}],
   "synonyms": ["string"],
   "antonyms": ["string"],
   "collocations": ["string"],
   "register_note": "string|null",
   "word_family": ["string"],
-  "common_mistakes": ["string"],
+  "usage_context": {
+    "register": "formal|informal|colloquial",
+    "colloquial_alternative": "string|null",
+    "contexts": ["string"]
+  },
   "grammar": {
     "noun": {"article":"der|die|das|null","plural":"string|null"},
     "verb": {"perfekt_aux":"haben|sein|null","partizip2":"string|null","praeteritum":"string|null","prasens":"string|null","rektion":"string|null","valency":"string|null","separable":"boolean|null"},

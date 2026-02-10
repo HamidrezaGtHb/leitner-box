@@ -22,10 +22,8 @@ const DEFAULT_SETTINGS: Settings = {
 
 export default function TodayPage() {
   const [dueCards, setDueCards] = useState<CardType[]>([]);
-  const [wordsAddedToday, setWordsAddedToday] = useState(0);
   const [availableSlots, setAvailableSlots] = useState(0);
   const [box1DueToday, setBox1DueToday] = useState(0);
-  const [scheduledForToday, setScheduledForToday] = useState(0);
   const [loading, setLoading] = useState(true);
   const [celebrate, setCelebrate] = useState(false);
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
@@ -72,12 +70,10 @@ export default function TodayPage() {
 
     const today = formatDate(new Date());
 
-    // Calculate available slots using the new logic
+    // Calculate available slots using pure Leitner logic
     const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
     setAvailableSlots(slotsData.availableSlots);
-    setBox1DueToday(slotsData.box1Due);
-    setWordsAddedToday(slotsData.box1New);
-    setScheduledForToday(slotsData.scheduledForToday);
+    setBox1DueToday(slotsData.box1DueToday);
 
     // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase
@@ -128,7 +124,18 @@ export default function TodayPage() {
     if (!user) return;
 
     const newBox = getNextBox(card.box, result);
-    const newDueDate = formatDate(getNextDueDate(newBox));
+    
+    // Calculate new due date based on result
+    let newDueDate: string;
+    if (result === 'wrong') {
+      // Failed cards: due tomorrow (natural retry, doesn't block today's slots)
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      newDueDate = formatDate(tomorrow);
+    } else {
+      // Correct: normal interval progression
+      newDueDate = formatDate(getNextDueDate(newBox));
+    }
 
     // Update card
     const { error: updateError } = await supabase
@@ -463,17 +470,30 @@ export default function TodayPage() {
                       </div>
                     )}
 
-                    {/* Common Mistakes */}
-                    {currentCard.back_json.common_mistakes && currentCard.back_json.common_mistakes.length > 0 && (
+                    {/* Usage Context */}
+                    {currentCard.back_json.usage_context && (
                       <div>
                         <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-                          {t.today.commonMistakes}
+                          Register & Usage
                         </div>
-                        {currentCard.back_json.common_mistakes.map((mistake, i) => (
-                          <div key={i} className="text-xs p-2 bg-red-50 text-red-700 rounded-lg mb-1">
-                            ⚠ {mistake}
+                        <div className="space-y-1.5">
+                          <div className="text-xs p-2 bg-info/10 rounded-lg flex items-center gap-2">
+                            <span className="font-medium text-info">Register:</span>
+                            <span className="text-text capitalize">{currentCard.back_json.usage_context.register}</span>
                           </div>
-                        ))}
+                          {currentCard.back_json.usage_context.colloquial_alternative && (
+                            <div className="text-xs p-2 bg-success/10 rounded-lg">
+                              <span className="font-medium text-success">Colloquial:</span>
+                              <span className="text-text ml-1">{currentCard.back_json.usage_context.colloquial_alternative}</span>
+                            </div>
+                          )}
+                          {currentCard.back_json.usage_context.contexts && currentCard.back_json.usage_context.contexts.length > 0 && (
+                            <div className="text-xs p-2 bg-accent/10 rounded-lg">
+                              <span className="font-medium text-accent">Used in:</span>
+                              <span className="text-text ml-1">{currentCard.back_json.usage_context.contexts.join(', ')}</span>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -535,10 +555,14 @@ export default function TodayPage() {
                     {quotaComplete ? t.today.quotaComplete : t.today.completeQuotaFirst}
                   </div>
                   <div className="text-sm text-text-muted">
-                    {wordsAddedToday} / {dailyLimit} {t.today.words} {t.today.word}
+                    {t.today.box1Load}: {box1DueToday} / {dailyLimit}
                   </div>
-                  <div className="text-xs text-text-muted mt-0.5">
-                    {t.today.availableSlots}: {availableSlots} • {t.today.box1Load}: {box1DueToday}
+                  <div className="text-xs text-success font-medium mt-0.5">
+                    {availableSlots > 0 ? (
+                      <>{t.today.availableSlots}: {availableSlots}</>
+                    ) : (
+                      <span className="text-warning">{t.today.dailyLimitReached}</span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -557,7 +581,7 @@ export default function TodayPage() {
             <div className="h-2 bg-muted rounded-full overflow-hidden">
               <div
                 className={`h-full transition-all duration-500 ${quotaComplete ? 'bg-success' : 'bg-warning'}`}
-                style={{ width: `${Math.min((wordsAddedToday / dailyLimit) * 100, 100)}%` }}
+                style={{ width: `${Math.min((box1DueToday / dailyLimit) * 100, 100)}%` }}
               />
             </div>
           </CardContent>

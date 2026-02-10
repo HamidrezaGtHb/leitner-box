@@ -2,7 +2,7 @@ export type POS = 'noun' | 'verb' | 'adjective' | 'adverb' | 'phrase' | 'nomen-v
 
 export type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
-export type Register = 'formal' | 'informal' | 'general';
+export type Register = 'formal' | 'informal' | 'colloquial' | 'general';
 
 export interface CardBackJSON {
   term: string;
@@ -23,7 +23,11 @@ export interface CardBackJSON {
   collocations: string[];
   register_note: string | null;
   word_family?: string[];
-  common_mistakes?: string[];
+  usage_context?: {
+    register: 'formal' | 'informal' | 'colloquial';
+    colloquial_alternative?: string;
+    contexts?: string[];
+  };
   grammar: {
     noun?: {
       article: 'der' | 'die' | 'das' | null;
@@ -73,7 +77,6 @@ export interface BacklogItem {
   level: string | null;
   pos: string | null;
   topic: string | null;
-  start_date: string;
   created_at: string;
 }
 
