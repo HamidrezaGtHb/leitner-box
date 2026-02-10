@@ -12,9 +12,10 @@ import {
   getNextDueTime,
   getBoxDistribution,
 } from '@/lib/streak';
-import { Button, Card, CardHeader, CardTitle, CardContent, Toggle } from '@/components/ui';
+import { Button, Card, CardHeader, CardTitle, CardContent, Toggle, Input } from '@/components/ui';
 import { useLanguage, Language } from '@/lib/i18n';
 import { useTheme } from '@/lib/theme';
+import { saveGeminiApiKeyAction, removeGeminiApiKeyAction, getApiKeyStatusAction } from '@/app/actions/settings-actions';
 import toast from 'react-hot-toast';
 
 const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
   intervals: { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 },
   daily_limit: 10,
   hide_future_cards: true,
+  gemini_api_key: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };
@@ -38,6 +40,11 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [maskedApiKey, setMaskedApiKey] = useState('');
+  const [savingApiKey, setSavingApiKey] = useState(false);
   const router = useRouter();
   const supabase = createClient();
   const { language, setLanguage, t } = useLanguage();
@@ -57,6 +64,7 @@ export default function SettingsPage() {
   useEffect(() => {
     loadSettings();
     loadStats();
+    loadApiKeyStatus();
   }, []);
 
   const loadSettings = async () => {
@@ -185,6 +193,54 @@ export default function SettingsPage() {
     toast.success(t.settings.settingsSaved);
   };
 
+  const loadApiKeyStatus = async () => {
+    const result = await getApiKeyStatusAction();
+    if (result.success) {
+      setHasApiKey(result.hasKey);
+      setMaskedApiKey(result.maskedKey || '');
+    }
+  };
+
+  const handleSaveApiKey = async () => {
+    if (!apiKeyInput.trim()) {
+      toast.error('Please enter an API key');
+      return;
+    }
+
+    setSavingApiKey(true);
+    const result = await saveGeminiApiKeyAction(apiKeyInput.trim());
+    
+    if (result.success) {
+      toast.success('API key saved successfully!');
+      setApiKeyInput('');
+      setShowApiKey(false);
+      await loadApiKeyStatus();
+    } else {
+      toast.error(result.error);
+    }
+    
+    setSavingApiKey(false);
+  };
+
+  const handleRemoveApiKey = async () => {
+    if (!confirm('Remove your personal API key? The app will use the default shared key.')) {
+      return;
+    }
+
+    setSavingApiKey(true);
+    const result = await removeGeminiApiKeyAction();
+    
+    if (result.success) {
+      toast.success('API key removed');
+      setHasApiKey(false);
+      setMaskedApiKey('');
+    } else {
+      toast.error(result.error);
+    }
+    
+    setSavingApiKey(false);
+  };
+
   if (loading || !settings) {
     return (
       <div className="min-h-screen bg-bg">
@@ -255,6 +311,108 @@ export default function SettingsPage() {
                 🌙 {t.settings.darkMode}
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Personal AI API Key Card */}
+        <Card padding="lg" className="border-accent/30">
+          <CardHeader>
+            <CardTitle>🤖 Personal AI API Key</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-text-muted">
+                Use your own free Gemini API key to avoid quota limits. Each user gets:
+              </p>
+              <ul className="text-sm text-text-muted list-disc list-inside space-y-1 ml-2">
+                <li><strong>15 requests/minute</strong> - Perfect for personal use</li>
+                <li><strong>1,500 requests/day</strong> - More than enough</li>
+                <li><strong>100% Free</strong> - No credit card required</li>
+              </ul>
+            </div>
+
+            {hasApiKey ? (
+              /* Has API Key - Show Status */
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 p-3 bg-success/10 rounded-xl border border-success/30">
+                  <span className="text-2xl">✅</span>
+                  <div className="flex-1">
+                    <div className="font-medium text-success">API Key Active</div>
+                    <div className="text-xs text-text-muted font-mono mt-0.5">
+                      {maskedApiKey}
+                    </div>
+                  </div>
+                  <Button
+                    variant="danger-soft"
+                    size="sm"
+                    onClick={handleRemoveApiKey}
+                    disabled={savingApiKey}
+                  >
+                    Remove
+                  </Button>
+                </div>
+                <p className="text-xs text-success">
+                  ✓ All AI generations now use your personal API key
+                </p>
+              </div>
+            ) : (
+              /* No API Key - Show Setup */
+              <div className="space-y-3">
+                <div className="p-3 bg-info/10 rounded-xl border border-info/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-xl">ℹ️</span>
+                    <div className="font-medium text-info">Using Shared API Key</div>
+                  </div>
+                  <p className="text-xs text-text-muted">
+                    Currently using the default shared key. Add your personal key for unlimited usage.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-text">
+                    Enter Your Gemini API Key
+                  </label>
+                  <div className="flex gap-2">
+                    <div className="flex-1 relative">
+                      <Input
+                        type={showApiKey ? 'text' : 'password'}
+                        value={apiKeyInput}
+                        onChange={(e) => setApiKeyInput(e.target.value)}
+                        placeholder="AIza..."
+                        inputSize="md"
+                        className="font-mono text-sm"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowApiKey(!showApiKey)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-text-muted hover:text-text"
+                      >
+                        {showApiKey ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    <Button
+                      variant="success"
+                      size="md"
+                      onClick={handleSaveApiKey}
+                      disabled={savingApiKey || !apiKeyInput.trim()}
+                      loading={savingApiKey}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-muted/30 rounded-xl space-y-2">
+                  <div className="text-sm font-medium text-text">How to get your free API key:</div>
+                  <ol className="text-sm text-text-muted list-decimal list-inside space-y-1 ml-2">
+                    <li>Visit <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" className="text-accent hover:underline font-medium">Google AI Studio</a></li>
+                    <li>Sign in with your Google account</li>
+                    <li>Click "Create API Key" (takes 30 seconds)</li>
+                    <li>Copy the key and paste it above</li>
+                  </ol>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 

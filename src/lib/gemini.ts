@@ -10,16 +10,30 @@ import {
 import { normalizeTerm } from '@/lib/utils';
 import { ErrorMessages } from '@/lib/errors';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+/**
+ * Get Gemini AI instance with user's personal API key or default
+ */
+function getGeminiAI(apiKey?: string | null): GoogleGenerativeAI {
+  const key = apiKey || process.env.GEMINI_API_KEY!;
+  
+  if (!key) {
+    throw new Error('No Gemini API key available. Please add your personal API key in Settings.');
+  }
+  
+  return new GoogleGenerativeAI(key);
+}
 
 /**
  * Generic function to generate JSON with retry logic
+ * @param apiKey - Optional user's personal API key
  */
 async function generateJson<T>(
   prompt: string,
   schema: any,
+  apiKey?: string | null,
   maxRetries = 1
 ): Promise<T> {
+  const genAI = getGeminiAI(apiKey);
   const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
   let lastError: any;
@@ -72,12 +86,14 @@ ${prompt}`;
 /**
  * Generate a new German term based on criteria
  * Returns structured JSON with term, normalized term, level, pos, topic, and reason
+ * @param params.apiKey - Optional user's personal Gemini API key
  */
 export async function generateNewTerm(params: {
   level: Level;
   pos: POS;
   topic?: string;
   existingTerms: string[]; // normalized terms to avoid
+  apiKey?: string | null;
 }): Promise<NewTermResponse> {
   const forbiddenTermsJson = JSON.stringify(params.existingTerms);
   const topicText = params.topic ? params.topic : '';
@@ -120,18 +136,20 @@ OUTPUT JSON SCHEMA:
 
 Return only JSON.`;
 
-  return generateJson<NewTermResponse>(prompt, NewTermResponseSchema);
+  return generateJson<NewTermResponse>(prompt, NewTermResponseSchema, params.apiKey);
 }
 
 /**
  * Generate the card back JSON for a given term
  * Returns complete CardBackJSON with all fields
  * Uses smart type detection for optimal flashcard content
+ * @param params.apiKey - Optional user's personal Gemini API key
  */
 export async function generateCardBack(params: {
   term: string;
   level?: string;
   pos?: string;
+  apiKey?: string | null;
 }): Promise<CardBackJSON> {
   const prompt = `SYSTEM:
 You are a German Language Database and expert flashcard content designer.
@@ -250,7 +268,8 @@ Return only JSON.`;
 
   const response = await generateJson<CardBackResponse>(
     prompt,
-    CardBackResponseSchema
+    CardBackResponseSchema,
+    params.apiKey
   );
 
   // Convert CardBackResponse to CardBackJSON (they're compatible)

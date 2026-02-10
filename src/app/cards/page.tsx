@@ -21,6 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
   intervals: { 1: 1, 2: 2, 3: 4, 4: 8, 5: 16 },
   daily_limit: 10,
   hide_future_cards: true,
+  gemini_api_key: null,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),
 };

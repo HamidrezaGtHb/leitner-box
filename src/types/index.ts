@@ -95,6 +95,7 @@ export interface Settings {
   intervals: Record<string, number>;
   daily_limit: number; // 5, 10, or 15 cards per day
   hide_future_cards: boolean; // Hide Box 2+ cards until due date
+  gemini_api_key: string | null; // Personal Gemini API key (optional)
   created_at: string;
   updated_at: string;
 }

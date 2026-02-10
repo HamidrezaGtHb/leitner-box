@@ -5,7 +5,25 @@ import { generateNewTerm, generateCardBack } from '@/lib/gemini';
 import { Level, POS, CardBackJSON } from '@/types';
 import { normalizeTerm, calculateAvailableNewCardSlots } from '@/lib/utils';
 import { getErrorMessage, ErrorMessages } from '@/lib/errors';
+import { decryptApiKey } from '@/lib/crypto';
 import type { NewTermResponse } from '@/lib/ai/schemas';
+
+/**
+ * Get user's personal API key from settings (decrypted)
+ */
+async function getUserApiKey(supabase: any, userId: string): Promise<string | null> {
+  const { data: settings } = await supabase
+    .from('settings')
+    .select('gemini_api_key')
+    .eq('user_id', userId)
+    .single();
+  
+  if (!settings?.gemini_api_key) {
+    return null;
+  }
+  
+  return decryptApiKey(settings.gemini_api_key);
+}
 
 /**
  * Server Action: Generate a new German term
@@ -44,12 +62,16 @@ export async function generateNewTermAction(
       ...(backlog?.map((b) => b.term_normalized) || []),
     ];
 
-    // Generate term with AI
+    // Get user's personal API key (if set)
+    const apiKey = await getUserApiKey(supabase, user.id);
+
+    // Generate term with AI using user's key or default
     const result = await generateNewTerm({
       level,
       pos,
       topic,
       existingTerms,
+      apiKey,
     });
 
     return { success: true, data: result };
@@ -83,11 +105,15 @@ export async function generateCardBackAction(
       };
     }
 
-    // Generate card back with AI
+    // Get user's personal API key (if set)
+    const apiKey = await getUserApiKey(supabase, user.id);
+
+    // Generate card back with AI using user's key or default
     const cardBack = await generateCardBack({
       term,
       level,
       pos,
+      apiKey,
     });
 
     return { success: true, data: cardBack };
@@ -148,11 +174,15 @@ export async function completeBacklogToCardAction(
     let cardBack: CardBackJSON;
 
     if (mode === 'ai') {
-      // Generate with AI
+      // Get user's personal API key (if set)
+      const apiKey = await getUserApiKey(supabase, user.id);
+      
+      // Generate with AI using user's key or default
       const result = await generateCardBack({
         term: backlogItem.term,
         level: backlogItem.level || undefined,
         pos: backlogItem.pos || undefined,
+        apiKey,
       });
       cardBack = result;
     } else {
