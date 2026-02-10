@@ -313,18 +313,29 @@ export function CardDetailModal({
                     </div>
                   )}
 
-                  {/* Common Mistakes */}
-                  {card.back_json.common_mistakes && card.back_json.common_mistakes.length > 0 && (
+                  {/* Usage Context */}
+                  {card.back_json.usage_context && (
                     <div>
                       <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
-                        {t.today.commonMistakes}
+                        Register & Usage
                       </div>
                       <div className="space-y-2">
-                        {card.back_json.common_mistakes.map((mistake, i) => (
-                          <div key={i} className="p-3 bg-red-50 text-red-700 rounded-xl text-sm">
-                            ⚠ {mistake}
+                        <div className="p-3 bg-info/10 rounded-xl flex items-center gap-2 text-sm">
+                          <span className="font-medium text-info">Register:</span>
+                          <span className="text-text capitalize">{card.back_json.usage_context.register}</span>
+                        </div>
+                        {card.back_json.usage_context.colloquial_alternative && (
+                          <div className="p-3 bg-success/10 rounded-xl text-sm">
+                            <span className="font-medium text-success">Colloquial:</span>
+                            <span className="text-text ml-1">{card.back_json.usage_context.colloquial_alternative}</span>
                           </div>
-                        ))}
+                        )}
+                        {card.back_json.usage_context.contexts && card.back_json.usage_context.contexts.length > 0 && (
+                          <div className="p-3 bg-accent/10 rounded-xl text-sm">
+                            <span className="font-medium text-accent">Used in:</span>
+                            <span className="text-text ml-1">{card.back_json.usage_context.contexts.join(', ')}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
