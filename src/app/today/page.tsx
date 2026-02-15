@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
-import { getNextBox, formatDate, getNextDueDate, calculateAvailableNewCardSlots } from '@/lib/utils';
+import { getNextBox, formatDate, getNextDueDate, calculateAvailableNewCardSlots, getTermFontSize } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
 import { Button, Card, CardContent, ArticleBadge, CopyButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
@@ -282,7 +282,7 @@ export default function TodayPage() {
                   <div className="space-y-4">
                     {article && <ArticleBadge article={article} size="lg" />}
                     <div className="flex items-center justify-center gap-2">
-                      <div className="text-4xl md:text-5xl font-bold text-text">
+                      <div className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
                         {currentCard.term}
                       </div>
                       <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
@@ -312,9 +312,11 @@ export default function TodayPage() {
                 <CardContent className="flex-1 flex flex-col overflow-hidden">
                   {/* Term Header */}
                   <div className="text-center pb-3 border-b mb-3 shrink-0">
-                    <div className="flex items-center justify-center gap-2 mb-1">
+                    <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
                       {article && <ArticleBadge article={article} size="md" />}
-                      <span className="text-2xl font-bold text-text">{currentCard.term}</span>
+                      <span className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
+                        {currentCard.term}
+                      </span>
                       <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
                     </div>
                     {currentCard.back_json.ipa && (

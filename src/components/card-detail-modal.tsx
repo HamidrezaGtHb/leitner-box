@@ -2,8 +2,11 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { Card as CardType } from '@/types';
-import { Card, CardContent, ArticleBadge, Badge, CopyButton, Button } from '@/components/ui';
+import { Card, CardContent, ArticleBadge, Badge, CopyButton, Button, Input } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
+import { getTermFontSize } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client';
+import toast from 'react-hot-toast';
 import * as Dialog from '@radix-ui/react-dialog';
 
 interface CardDetailModalProps {
@@ -26,9 +29,15 @@ export function CardDetailModal({
   onDelete,
 }: CardDetailModalProps) {
   const { t } = useLanguage();
+  const supabase = createClient();
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Inline editing state
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [newItemValue, setNewItemValue] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const card = cards[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -87,6 +96,95 @@ export function CardDetailModal({
     return 'default' as const;
   };
 
+  // Inline add handlers
+  const handleInlineAdd = async (section: string) => {
+    if (!newItemValue.trim()) {
+      toast.error('Please enter a value');
+      return;
+    }
+
+    setSaving(true);
+    const updatedBackJson = { ...card.back_json };
+
+    try {
+      switch (section) {
+        case 'meaning':
+          updatedBackJson.meaning_fa = [...updatedBackJson.meaning_fa, newItemValue.trim()];
+          break;
+        
+        case 'example':
+          const [de, fa] = newItemValue.split('|').map(s => s.trim());
+          if (!de || !fa) {
+            toast.error('Format: German | Persian');
+            setSaving(false);
+            return;
+          }
+          updatedBackJson.examples = [...updatedBackJson.examples, { de, fa, note: null, register: 'general' }];
+          break;
+        
+        case 'synonym':
+          updatedBackJson.synonyms = [...updatedBackJson.synonyms, newItemValue.trim()];
+          break;
+        
+        case 'antonym':
+          updatedBackJson.antonyms = [...updatedBackJson.antonyms, newItemValue.trim()];
+          break;
+        
+        case 'collocation':
+          updatedBackJson.collocations = [...updatedBackJson.collocations, newItemValue.trim()];
+          break;
+        
+        case 'word_family':
+          updatedBackJson.word_family = [...(updatedBackJson.word_family || []), newItemValue.trim()];
+          break;
+        
+        case 'usage_context':
+          if (!updatedBackJson.usage_context) {
+            updatedBackJson.usage_context = {
+              register: 'informal',
+              contexts: [newItemValue.trim()]
+            };
+          } else {
+            updatedBackJson.usage_context.contexts = [
+              ...(updatedBackJson.usage_context.contexts || []),
+              newItemValue.trim()
+            ];
+          }
+          break;
+      }
+
+      // Save to database
+      const { error } = await supabase
+        .from('cards')
+        .update({
+          back_json: updatedBackJson,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', card.id);
+
+      if (error) {
+        console.error('Error updating card:', error);
+        toast.error('Failed to save. Please try again.');
+      } else {
+        // Update local state
+        card.back_json = updatedBackJson;
+        toast.success('Added successfully!');
+        setNewItemValue('');
+        setEditingSection(null);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      toast.error('Failed to save. Please try again.');
+    }
+    
+    setSaving(false);
+  };
+
+  const cancelInlineEdit = () => {
+    setEditingSection(null);
+    setNewItemValue('');
+  };
+
   if (!card) return null;
 
   const article = card.back_json.grammar.noun?.article;
@@ -135,9 +233,11 @@ export function CardDetailModal({
               <div ref={contentRef} className="max-h-[80vh] overflow-y-auto">
                 {/* Header */}
                 <div className="p-6 border-b bg-surface">
-                  <div className="flex items-center justify-center gap-3 mb-2">
+                  <div className="flex items-center justify-center gap-3 mb-2 flex-wrap">
                     {article && <ArticleBadge article={article} size="lg" />}
-                    <span className="text-3xl font-bold text-text">{card.term}</span>
+                    <span className={`${getTermFontSize(card.term)} font-bold text-text break-words max-w-full text-center`}>
+                      {card.term}
+                    </span>
                     <CopyButton text={article ? `${article} ${card.term}` : card.term} size="md" />
                   </div>
                   <div className="flex items-center justify-center gap-2">
@@ -164,9 +264,48 @@ export function CardDetailModal({
 
                   {/* Meanings */}
                   <div>
-                    <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
-                      {t.today.meanings}
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                        {t.today.meanings}
+                      </div>
+                      <button
+                        onClick={() => setEditingSection('meaning')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
                     </div>
+                    
+                    {editingSection === 'meaning' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="معنی فارسی..."
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('meaning')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
                     <ul className="space-y-2">
                       {card.back_json.meaning_fa.map((meaning, i) => (
                         <li key={i} className="text-text text-lg flex items-start gap-2">
@@ -240,11 +379,51 @@ export function CardDetailModal({
                   )}
 
                   {/* Examples with Register badges */}
-                  {card.back_json.examples.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                         {t.today.examples}
                       </div>
+                      <button
+                        onClick={() => setEditingSection('example')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    
+                    {editingSection === 'example' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="German example | ترجمه فارسی"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="text-xs text-text-muted">Format: German | Persian</div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('example')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.examples.length > 0 && (
                       <div className="space-y-3">
                         {card.back_json.examples.slice(0, 3).map((ex, i) => (
                           <div key={i} className="p-4 bg-surface-2 rounded-xl">
@@ -264,45 +443,225 @@ export function CardDetailModal({
                           </div>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
 
                   {/* Collocations */}
-                  {card.back_json.collocations.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                         {t.today.collocations}
                       </div>
+                      <button
+                        onClick={() => setEditingSection('collocation')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    
+                    {editingSection === 'collocation' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="Collocation (e.g., einen Termin machen)"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('collocation')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.collocations.length > 0 && (
                       <div className="flex flex-wrap gap-2">
                         {card.back_json.collocations.map((col, i) => (
                           <Badge key={i} variant="default" size="md">{col}</Badge>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    )}
+                    
+                    {card.back_json.collocations.length === 0 && editingSection !== 'collocation' && (
+                      <div className="text-xs text-text-muted italic">No collocations yet</div>
+                    )}
+                  </div>
 
-                  {/* Synonyms & Antonyms */}
-                  {(card.back_json.synonyms.length > 0 || card.back_json.antonyms.length > 0) && (
-                    <div className="flex flex-wrap gap-2">
-                      {card.back_json.synonyms.map((s, i) => (
-                        <span key={`s-${i}`} className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm">
-                          = {s}
-                        </span>
-                      ))}
-                      {card.back_json.antonyms.map((a, i) => (
-                        <span key={`a-${i}`} className="px-3 py-1 bg-red-50 text-red-700 rounded-lg text-sm">
-                          ≠ {a}
-                        </span>
-                      ))}
+                  {/* Synonyms */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                        Synonyms
+                      </div>
+                      <button
+                        onClick={() => setEditingSection('synonym')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
                     </div>
-                  )}
+                    
+                    {editingSection === 'synonym' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="Synonym (German)"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('synonym')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.synonyms.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {card.back_json.synonyms.map((s, i) => (
+                          <span key={i} className="px-3 py-1 bg-green-50 text-green-700 rounded-lg text-sm">
+                            = {s}
+                          </span>
+                        ))}
+                      </div>
+                    ) : editingSection !== 'synonym' && (
+                      <div className="text-xs text-text-muted italic">No synonyms yet</div>
+                    )}
+                  </div>
+
+                  {/* Antonyms */}
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
+                        Antonyms
+                      </div>
+                      <button
+                        onClick={() => setEditingSection('antonym')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    
+                    {editingSection === 'antonym' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="Antonym (German)"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('antonym')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.antonyms.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {card.back_json.antonyms.map((a, i) => (
+                          <span key={i} className="px-3 py-1 bg-red-50 text-red-700 rounded-lg text-sm">
+                            ≠ {a}
+                          </span>
+                        ))}
+                      </div>
+                    ) : editingSection !== 'antonym' && (
+                      <div className="text-xs text-text-muted italic">No antonyms yet</div>
+                    )}
+                  </div>
 
                   {/* Word Family */}
-                  {card.back_json.word_family && card.back_json.word_family.length > 0 && (
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                         {t.today.wordFamily}
                       </div>
+                      <button
+                        onClick={() => setEditingSection('word_family')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add
+                      </button>
+                    </div>
+                    
+                    {editingSection === 'word_family' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="Related word (e.g., der Fahrer)"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('word_family')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.word_family && card.back_json.word_family.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {card.back_json.word_family.map((word, i) => (
                           <span key={i} className="px-3 py-1 bg-purple-50 text-purple-700 rounded-lg text-sm">
@@ -310,15 +669,56 @@ export function CardDetailModal({
                           </span>
                         ))}
                       </div>
-                    </div>
-                  )}
+                    ) : editingSection !== 'word_family' && (
+                      <div className="text-xs text-text-muted italic">No word family yet</div>
+                    )}
+                  </div>
 
                   {/* Usage Context */}
-                  {card.back_json.usage_context && (
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-3">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide">
                         Register & Usage
                       </div>
+                      <button
+                        onClick={() => setEditingSection('usage_context')}
+                        className="text-xs text-accent hover:text-accent/80 font-medium transition-colors"
+                      >
+                        + Add Context
+                      </button>
+                    </div>
+                    
+                    {editingSection === 'usage_context' && (
+                      <div className="mb-3 p-3 bg-accent/5 rounded-lg border border-accent/20 space-y-2">
+                        <Input
+                          value={newItemValue}
+                          onChange={(e) => setNewItemValue(e.target.value)}
+                          placeholder="Usage context (e.g., business, daily conversation)"
+                          inputSize="sm"
+                          autoFocus
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            variant="success"
+                            size="sm"
+                            onClick={() => handleInlineAdd('usage_context')}
+                            disabled={saving}
+                            loading={saving}
+                          >
+                            Save
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={cancelInlineEdit}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {card.back_json.usage_context ? (
                       <div className="space-y-2">
                         <div className="p-3 bg-info/10 rounded-xl flex items-center gap-2 text-sm">
                           <span className="font-medium text-info">Register:</span>
@@ -337,8 +737,10 @@ export function CardDetailModal({
                           </div>
                         )}
                       </div>
-                    </div>
-                  )}
+                    ) : editingSection !== 'usage_context' && (
+                      <div className="text-xs text-text-muted italic">No usage context yet</div>
+                    )}
+                  </div>
 
                   {/* Register note */}
                   {card.back_json.register_note && (

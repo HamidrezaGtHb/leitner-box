@@ -156,6 +156,23 @@ You are a German Language Database and expert flashcard content designer.
 Output ONLY valid JSON (no markdown, no commentary). The JSON must match the schema exactly.
 Use Persian for meanings, German for examples.
 
+CRITICAL ACCURACY RULES - VERIFY BEFORE GENERATING:
+1. ✓ ALL meanings are 100% accurate - double-check against your knowledge
+2. ✓ Examples are grammatically PERFECT native German sentences
+3. ✓ Persian translations match the German meaning PRECISELY
+4. ✓ NO invented words, collocations, or idioms - only REAL verified vocabulary
+5. ✓ Grammar information (article, plural, verb forms) is CORRECT
+6. ✓ Examples sound NATURAL to native German speakers (not translation-like)
+7. ✓ Each example Persian translation is accurate to that specific German sentence
+
+QUALITY CHECKLIST (mental verification):
+- [ ] Term exists in standard German dictionaries
+- [ ] Meanings verified from multiple mental sources
+- [ ] Examples are authentic German (not English → German translations)
+- [ ] Persian translations are contextually precise
+- [ ] Collocations are real and commonly used
+- [ ] Grammar forms are verified
+
 USER INPUT:
 term: ${params.term}
 level: ${params.level || 'B1'}
@@ -163,17 +180,18 @@ pos_hint: ${params.pos || 'auto-detect'}
 
 ────────────────
 TASK:
-1. IDENTIFY the type: Verb, Noun, Adjective, Adverb, Nomen-Verb Verbindung, Idiom, or Phrase.
-2. Generate ONLY relevant info for that type. Omit irrelevant sections.
+1. VERIFY the term exists and is correct German vocabulary
+2. IDENTIFY the type: Verb, Noun, Adjective, Adverb, Nomen-Verb Verbindung, Idiom, or Phrase
+3. Generate ONLY verified, accurate information for that type
 
 ────────────────
 RULES:
 - Practical, everyday German (B1–C1)
-- Examples must sound natural
-- ALWAYS include collocations (2-4 items) — REQUIRED
-- ALWAYS include exactly 2 examples (with register tag) — REQUIRED for ALL types
+- Examples MUST be authentic natural German sentences
+- ALWAYS include 2-4 REAL collocations (commonly used combinations)
+- ALWAYS include exactly 2 natural examples with accurate register tags — REQUIRED
 - Each example MUST have a "register" field: "formal", "informal", or "colloquial"
-- word_family: 2-4 related words from the same word family (e.g. for "fahren" → ["der Fahrer", "die Fahrt", "die Abfahrt", "erfahren"])
+- word_family: 2-4 REAL related words from the same word family (e.g. for "fahren" → ["der Fahrer", "die Fahrt", "die Abfahrt", "erfahren"])
 - usage_context: {
     register: "formal" | "informal" | "colloquial" (overall register of this term)
     colloquial_alternative: "string" (روزمره equivalent if this term is formal, or null)
@@ -272,6 +290,80 @@ Return only JSON.`;
     params.apiKey
   );
 
-  // Convert CardBackResponse to CardBackJSON (they're compatible)
-  return response as CardBackJSON;
+  // Validate generated content quality
+  const cardBack = response as CardBackJSON;
+  const validation = validateCardContent(cardBack);
+  
+  if (!validation.valid && validation.warnings.length > 0) {
+    console.warn('⚠️ Card content validation warnings:', validation.warnings);
+    console.warn('Term:', params.term, '| Generated data may need review');
+  }
+
+  return cardBack;
+}
+
+/**
+ * Validate generated card content for quality and accuracy
+ * Helps catch AI errors in meanings, examples, and other fields
+ */
+function validateCardContent(cardBack: CardBackJSON): {
+  valid: boolean;
+  warnings: string[];
+} {
+  const warnings: string[] = [];
+  
+  // Check meanings exist and are substantive
+  if (!cardBack.meaning_fa || cardBack.meaning_fa.length === 0) {
+    warnings.push('No Persian meanings provided');
+  } else {
+    cardBack.meaning_fa.forEach((meaning, i) => {
+      if (meaning.length < 3) {
+        warnings.push(`Meaning ${i + 1} too short (likely error)`);
+      }
+    });
+  }
+  
+  // Check examples exist and are substantive
+  if (!cardBack.examples || cardBack.examples.length < 2) {
+    warnings.push('Insufficient examples (need at least 2)');
+  } else {
+    cardBack.examples.forEach((ex, i) => {
+      if (ex.de.length < 8) {
+        warnings.push(`German example ${i + 1} too short (likely error)`);
+      }
+      if (ex.fa.length < 3) {
+        warnings.push(`Persian translation ${i + 1} too short (likely error)`);
+      }
+      if (!ex.register) {
+        warnings.push(`Example ${i + 1} missing register tag`);
+      }
+    });
+  }
+  
+  // Check collocations
+  if (!cardBack.collocations || cardBack.collocations.length === 0) {
+    warnings.push('No collocations provided (should have 2-4)');
+  }
+  
+  // Check grammar for nouns
+  if (cardBack.pos === 'noun' && cardBack.grammar.noun) {
+    if (!cardBack.grammar.noun.article) {
+      warnings.push('Noun missing article (der/die/das)');
+    }
+  }
+  
+  // Check grammar for verbs
+  if (cardBack.pos === 'verb' && cardBack.grammar.verb) {
+    if (!cardBack.grammar.verb.partizip2) {
+      warnings.push('Verb missing Partizip II');
+    }
+    if (!cardBack.grammar.verb.perfekt_aux) {
+      warnings.push('Verb missing perfect auxiliary (haben/sein)');
+    }
+  }
+  
+  return {
+    valid: warnings.length === 0,
+    warnings
+  };
 }

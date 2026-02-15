@@ -66,6 +66,19 @@ export function getNextBox(currentBox: number, result: 'correct' | 'wrong'): num
 }
 
 /**
+ * Get responsive font size class based on term length
+ * Handles long German compound words gracefully
+ */
+export function getTermFontSize(term: string): string {
+  const length = term.length;
+  if (length <= 10) return 'text-5xl md:text-6xl'; // Very large - short words
+  if (length <= 15) return 'text-4xl md:text-5xl'; // Large - normal words
+  if (length <= 20) return 'text-3xl md:text-4xl'; // Medium - longer words
+  if (length <= 30) return 'text-2xl md:text-3xl'; // Small - compound words
+  return 'text-xl md:text-2xl'; // Very small - very long compounds
+}
+
+/**
  * Calculate available new card slots for today - Pure Leitner Method
  * Formula: availableSlots = dailyLimit - box1DueToday
  * This ensures sustainable daily workload based on cognitive capacity
