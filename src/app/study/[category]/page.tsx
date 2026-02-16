@@ -235,6 +235,7 @@ export default function StudyCategoryPage() {
           onClose={handleCloseModal}
           onPrevious={handlePrevious}
           onNext={handleNext}
+          onProgressUpdate={loadProgress}
         />
       )}
     </div>

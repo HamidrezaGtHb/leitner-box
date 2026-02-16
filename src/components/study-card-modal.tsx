@@ -14,6 +14,7 @@ interface StudyCardModalProps {
   onClose: () => void;
   onPrevious: () => void;
   onNext: () => void;
+  onProgressUpdate?: () => void;
 }
 
 export function StudyCardModal({
@@ -23,6 +24,7 @@ export function StudyCardModal({
   onClose,
   onPrevious,
   onNext,
+  onProgressUpdate,
 }: StudyCardModalProps) {
   const [showAnswer, setShowAnswer] = useState(false);
   const [progress, setProgress] = useState<StudyProgress | null>(null);
@@ -45,6 +47,17 @@ export function StudyCardModal({
     const updated = await updateMasteryLevel(card.id, card.category, knew);
     if (updated) {
       setProgress(updated);
+      // Notify parent to reload progress
+      onProgressUpdate?.();
+      // Automatically move to next card after short delay
+      setTimeout(() => {
+        if (currentIndex < totalCards - 1) {
+          onNext();
+        }
+      }, 500);
+    } else {
+      console.error('Failed to update mastery level');
+      alert('Failed to save progress. Please make sure you are logged in.');
     }
     setUpdating(false);
   }
