@@ -37,10 +37,10 @@ export default function StudyPage() {
                   <div className="text-4xl">{set.icon}</div>
                   <div className="flex-1">
                     <h2 className="text-lg font-semibold text-text">
-                      {language === 'de' ? set.title : set.titleFa}
+                      {set.title}
                     </h2>
                     <p className="text-sm text-text-muted mt-1">
-                      {language === 'de' ? set.description : set.descriptionFa}
+                      {set.description}
                     </p>
                   </div>
                 </div>
@@ -70,7 +70,7 @@ export default function StudyPage() {
                           key={sub.id}
                           className="px-2 py-1 bg-surface-2 rounded text-xs text-text"
                         >
-                          {language === 'de' ? sub.title : sub.titleFa}
+                          {sub.title}
                         </span>
                       ))}
                     </div>

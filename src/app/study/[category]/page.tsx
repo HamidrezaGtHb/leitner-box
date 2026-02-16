@@ -87,7 +87,7 @@ export default function StudyCategoryPage() {
             <span className="text-4xl">{studySet.icon}</span>
             <div>
               <h1 className="text-2xl font-semibold text-text">
-                {language === 'de' ? studySet.title : studySet.titleFa}
+                {studySet.title}
               </h1>
               <p className="text-sm text-text-muted mt-1">
                 {displayCards.length} {t.study.totalCards}
@@ -115,7 +115,7 @@ export default function StudyCategoryPage() {
                     size="sm"
                     onClick={() => setSelectedSubcategory(sub.id)}
                   >
-                    {language === 'de' ? sub.title : sub.titleFa}
+                    {sub.title}
                   </Button>
                 ))}
               </div>

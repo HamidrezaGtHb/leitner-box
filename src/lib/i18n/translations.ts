@@ -192,6 +192,10 @@ export const translations = {
       irregularVerbsDesc: 'By vowel change patterns',
       verbsAdjectivesWithCases: 'Verbs/Adjectives with Cases',
       verbsAdjectivesWithCasesDesc: 'Requiring Dativ or Genitiv',
+      nounsWithPrepositions: 'Nomen mit Präpositionen',
+      nounsWithPrepositionsDesc: 'Nouns with fixed prepositions',
+      adjectivesWithPrepositions: 'Adjektive mit Präpositionen',
+      adjectivesWithPrepositionsDesc: 'Adjectives with fixed prepositions',
       // Card content labels
       preposition: 'Preposition',
       case: 'Case',
@@ -490,6 +494,10 @@ export const translations = {
       irregularVerbsDesc: 'Nach Vokalwechselmustern',
       verbsAdjectivesWithCases: 'Verben/Adjektive mit Kasus',
       verbsAdjectivesWithCasesDesc: 'Mit Dativ oder Genitiv',
+      nounsWithPrepositions: 'Nomen mit Präpositionen',
+      nounsWithPrepositionsDesc: 'Nomen mit festen Präpositionen',
+      adjectivesWithPrepositions: 'Adjektive mit Präpositionen',
+      adjectivesWithPrepositionsDesc: 'Adjektive mit festen Präpositionen',
       // Card content labels
       preposition: 'Präposition',
       case: 'Kasus',

@@ -103,6 +103,8 @@ export interface Settings {
 // Study Sets Types
 export type StudySetCategory = 
   | 'verbs-with-prepositions'
+  | 'nouns-with-prepositions'
+  | 'adjectives-with-prepositions'
   | 'prepositions-with-cases'
   | 'irregular-verbs'
   | 'verbs-adjectives-with-cases';
