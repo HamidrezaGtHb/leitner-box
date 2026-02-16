@@ -206,6 +206,18 @@ export const translations = {
       infinitiv: 'Infinitiv',
       praeteritum: 'Präteritum',
       perfekt: 'Perfekt',
+      // Progress tracking
+      mastery: 'Mastery',
+      masteryLevel: 'Mastery Level',
+      iKnowIt: 'I Know It',
+      dontKnow: "Don't Know",
+      notStarted: 'Not Started',
+      bronze: 'Bronze',
+      silver: 'Silver',
+      gold: 'Gold',
+      progressOverview: 'Progress Overview',
+      filterByMastery: 'Filter by Mastery',
+      all: 'All',
     },
 
     // Settings page
@@ -508,6 +520,18 @@ export const translations = {
       infinitiv: 'Infinitiv',
       praeteritum: 'Präteritum',
       perfekt: 'Perfekt',
+      // Progress tracking
+      mastery: 'Beherrschung',
+      masteryLevel: 'Beherrschungsstufe',
+      iKnowIt: 'Ich kann es',
+      dontKnow: 'Ich kann es nicht',
+      notStarted: 'Nicht begonnen',
+      bronze: 'Bronze',
+      silver: 'Silber',
+      gold: 'Gold',
+      progressOverview: 'Fortschrittsübersicht',
+      filterByMastery: 'Nach Beherrschung filtern',
+      all: 'Alle',
     },
 
     // Settings page

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { StudyCard } from '@/types';
+import { StudyCard, StudyProgress } from '@/types';
 import { Button, Card, CardContent } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
+import { getCardProgress, updateMasteryLevel } from '@/lib/study-progress';
+import { MasteryBadge } from './mastery-badge';
 
 interface StudyCardModalProps {
   card: StudyCard;
@@ -23,12 +25,29 @@ export function StudyCardModal({
   onNext,
 }: StudyCardModalProps) {
   const [showAnswer, setShowAnswer] = useState(false);
+  const [progress, setProgress] = useState<StudyProgress | null>(null);
+  const [updating, setUpdating] = useState(false);
   const { t } = useLanguage();
 
   // Reset showAnswer when card changes
   useEffect(() => {
     setShowAnswer(false);
+    loadProgress();
   }, [card.id]);
+
+  async function loadProgress() {
+    const data = await getCardProgress(card.id);
+    setProgress(data);
+  }
+
+  async function handleKnew(knew: boolean) {
+    setUpdating(true);
+    const updated = await updateMasteryLevel(card.id, card.category, knew);
+    if (updated) {
+      setProgress(updated);
+    }
+    setUpdating(false);
+  }
 
   // Handle keyboard navigation
   useEffect(() => {
@@ -233,8 +252,35 @@ export function StudyCardModal({
           </div>
         </div>
 
-        {/* Navigation Footer */}
-        <div className="bg-surface border-t rounded-b-xl p-4 mt-2">
+        {/* Mastery Level & Actions */}
+        <div className="bg-surface border-t p-4 mt-2">
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-text-muted">{t.study.mastery}:</span>
+              <MasteryBadge level={progress?.mastery_level ?? 0} size="md" />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => handleKnew(false)}
+                disabled={updating || !showAnswer}
+              >
+                {t.study.dontKnow}
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => handleKnew(true)}
+                disabled={updating || !showAnswer}
+              >
+                {t.study.iKnowIt}
+              </Button>
+            </div>
+          </div>
+
+          {/* Navigation Footer */}
           <div className="flex items-center justify-between gap-3">
             <Button
               variant="secondary"

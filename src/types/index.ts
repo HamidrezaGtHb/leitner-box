@@ -145,3 +145,24 @@ export interface StudySet {
     titleFa: string;
   }>;
 }
+
+// Study Progress Types
+export type MasteryLevel = 0 | 1 | 2 | 3;
+
+export interface StudyProgress {
+  id: string;
+  user_id: string;
+  card_id: string;
+  category: StudySetCategory;
+  mastery_level: MasteryLevel;
+  last_reviewed_at: string;
+  created_at: string;
+}
+
+export interface StudyStats {
+  total: number;
+  notStarted: number;  // 0 ticks
+  bronze: number;      // 1 tick
+  silver: number;      // 2 ticks
+  gold: number;        // 3 ticks
+}
