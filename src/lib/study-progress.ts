@@ -52,37 +52,50 @@ export async function updateMasteryLevel(
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Get current progress
-  const current = await getCardProgress(cardId);
-  const currentLevel = current?.mastery_level ?? 0;
+  try {
+    // Get current progress using same supabase instance
+    const { data: current } = await supabase
+      .from('study_progress')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('card_id', cardId)
+      .maybeSingle();
 
-  // Calculate new level
-  let newLevel: MasteryLevel;
-  if (knew) {
-    newLevel = Math.min(3, currentLevel + 1) as MasteryLevel;
-  } else {
-    newLevel = Math.max(0, currentLevel - 1) as MasteryLevel;
-  }
+    const currentLevel = current?.mastery_level ?? 0;
 
-  // Upsert
-  const { data, error } = await supabase
-    .from('study_progress')
-    .upsert({
-      user_id: user.id,
-      card_id: cardId,
-      category,
-      mastery_level: newLevel,
-      last_reviewed_at: new Date().toISOString(),
-    })
-    .select()
-    .single();
+    // Calculate new level
+    let newLevel: MasteryLevel;
+    if (knew) {
+      // I Know It: increment level (max 3)
+      newLevel = Math.min(3, currentLevel + 1) as MasteryLevel;
+    } else {
+      // Don't Know: reset to 0
+      newLevel = 0;
+    }
 
-  if (error) {
-    console.error('Error updating mastery:', error);
+    // Upsert
+    const { data, error } = await supabase
+      .from('study_progress')
+      .upsert({
+        user_id: user.id,
+        card_id: cardId,
+        category,
+        mastery_level: newLevel,
+        last_reviewed_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating mastery:', error);
+      return null;
+    }
+
+    return data;
+  } catch (err) {
+    console.error('Exception in updateMasteryLevel:', err);
     return null;
   }
-
-  return data;
 }
 
 // Calculate stats for a category
