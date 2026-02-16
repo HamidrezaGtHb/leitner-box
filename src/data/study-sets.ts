@@ -637,7 +637,7 @@ const verbsWithPrepositionsCards: StudyCard[] = [
   },
   {
     id: 'vp-46',
-    category:='verbs-with-prepositions',
+    category: 'verbs-with-prepositions',
     front: 'sich entschließen',
     back: {
       preposition: 'zu',
