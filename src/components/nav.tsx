@@ -14,6 +14,7 @@ export function Nav() {
     { href: '/today', label: t.nav.today, icon: '📚' },
     { href: '/backlog', label: t.nav.backlog, icon: '📝' },
     { href: '/cards', label: t.nav.cards, icon: '🗂️' },
+    { href: '/study', label: t.nav.study, icon: '📖' },
   ];
 
   const isActive = (path: string) => pathname === path;

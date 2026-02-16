@@ -99,3 +99,47 @@ export interface Settings {
   created_at: string;
   updated_at: string;
 }
+
+// Study Sets Types
+export type StudySetCategory = 
+  | 'verbs-with-prepositions'
+  | 'prepositions-with-cases'
+  | 'irregular-verbs'
+  | 'verbs-adjectives-with-cases';
+
+export interface StudyCard {
+  id: string;
+  category: StudySetCategory;
+  subcategory?: string; // e.g., "Dativ", "Akkusativ", "e→i→e"
+  front: string; // Main term (e.g., "sich freuen", "auf", "geben")
+  back: {
+    preposition?: string; // For verbs with prepositions
+    case?: string; // Required case (Dativ, Akkusativ, Genitiv)
+    examples: Array<{
+      de: string;
+      fa: string;
+    }>;
+    meanings?: string[]; // Persian meanings
+    notes?: string[]; // Additional notes
+    verb_forms?: {
+      infinitiv: string;
+      praeteritum: string;
+      perfekt: string;
+    };
+  };
+}
+
+export interface StudySet {
+  id: StudySetCategory;
+  title: string;
+  titleFa: string;
+  description: string;
+  descriptionFa: string;
+  icon: string;
+  cardCount: number;
+  subcategories?: Array<{
+    id: string;
+    title: string;
+    titleFa: string;
+  }>;
+}
