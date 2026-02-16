@@ -75,6 +75,21 @@ SELECT * FROM study_progress LIMIT 1;
 1. مطمئن شوید login هستید
 2. Console را چک کنید برای error دقیق‌تر
 
+#### خطا: `duplicate key value violates unique constraint`
+➡️ **راه‌حل**: این معمولاً مشکلی نیست - کد ما حالا این را handle می‌کند
+
+## Debug: چک کردن Console
+
+1. باز کنید: **F12** (Developer Tools)
+2. تب **Console** را انتخاب کنید
+3. دکمه "I Know It" را بزنید
+4. **تمام پیغام‌های Error** را به من بگویید
+
+پیغام‌های مفید:
+- `Error fetching current progress:` - مشکل در خواندن progress
+- `Error updating mastery:` - مشکل در ذخیره‌سازی
+- `Error inserting mastery:` - مشکل در ایجاد record جدید
+
 ## پس از موفقیت
 
 بعد از اینکه همه چیز کار کرد:

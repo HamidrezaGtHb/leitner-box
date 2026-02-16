@@ -50,16 +50,24 @@ export async function updateMasteryLevel(
 ): Promise<StudyProgress | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) {
+    console.error('No user logged in');
+    return null;
+  }
 
   try {
     // Get current progress using same supabase instance
-    const { data: current } = await supabase
+    const { data: current, error: fetchError } = await supabase
       .from('study_progress')
       .select('*')
       .eq('user_id', user.id)
       .eq('card_id', cardId)
       .maybeSingle();
+
+    if (fetchError) {
+      console.error('Error fetching current progress:', fetchError);
+      return null;
+    }
 
     const currentLevel = current?.mastery_level ?? 0;
 
@@ -73,25 +81,46 @@ export async function updateMasteryLevel(
       newLevel = 0;
     }
 
-    // Upsert
-    const { data, error } = await supabase
-      .from('study_progress')
-      .upsert({
-        user_id: user.id,
-        card_id: cardId,
-        category,
-        mastery_level: newLevel,
-        last_reviewed_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    // If record exists, update it; otherwise insert
+    if (current) {
+      // Update existing record
+      const { data, error } = await supabase
+        .from('study_progress')
+        .update({
+          mastery_level: newLevel,
+          last_reviewed_at: new Date().toISOString(),
+        })
+        .eq('id', current.id)
+        .select()
+        .single();
 
-    if (error) {
-      console.error('Error updating mastery:', error);
-      return null;
+      if (error) {
+        console.error('Error updating mastery:', error);
+        return null;
+      }
+
+      return data;
+    } else {
+      // Insert new record
+      const { data, error } = await supabase
+        .from('study_progress')
+        .insert({
+          user_id: user.id,
+          card_id: cardId,
+          category,
+          mastery_level: newLevel,
+          last_reviewed_at: new Date().toISOString(),
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error inserting mastery:', error);
+        return null;
+      }
+
+      return data;
     }
-
-    return data;
   } catch (err) {
     console.error('Exception in updateMasteryLevel:', err);
     return null;
