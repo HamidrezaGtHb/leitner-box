@@ -415,6 +415,13 @@ export default function SettingsPage() {
               >
                 🌙 {t.settings.darkMode}
               </Button>
+              <Button
+                variant={theme === 'system' ? 'primary' : 'secondary'}
+                size="md"
+                onClick={() => setTheme('system')}
+              >
+                💻 {t.settings.systemMode}
+              </Button>
             </div>
           </CardContent>
         </Card>

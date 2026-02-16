@@ -258,9 +258,10 @@ export const translations = {
       accountDesc: 'Manage your account',
       logoutConfirm: 'Are you sure you want to logout?',
       appearance: 'Appearance',
-      appearanceDesc: 'Choose your preferred theme',
+      appearanceDesc: 'Choose your preferred theme (System follows your device)',
       lightMode: 'Light',
       darkMode: 'Dark',
+      systemMode: 'System',
     },
 
     // Errors
@@ -572,9 +573,10 @@ export const translations = {
       accountDesc: 'Verwalten Sie Ihr Konto',
       logoutConfirm: 'Sind Sie sicher, dass Sie sich abmelden möchten?',
       appearance: 'Erscheinungsbild',
-      appearanceDesc: 'Wählen Sie Ihr bevorzugtes Theme',
+      appearanceDesc: 'Wählen Sie Ihr bevorzugtes Theme (System folgt Ihrem Gerät)',
       lightMode: 'Hell',
       darkMode: 'Dunkel',
+      systemMode: 'System',
     },
 
     // Errors
