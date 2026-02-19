@@ -7,7 +7,7 @@ import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
 import { getNextBox, formatDate, getNextDueDate, calculateAvailableNewCardSlots, getTermFontSize } from '@/lib/utils';
 import { Celebration } from '@/components/celebration';
-import { Button, Card, CardContent, ArticleBadge, CopyButton } from '@/components/ui';
+import { Button, Card, CardContent, ArticleBadge, CopyButton, SpeakButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
 
@@ -285,7 +285,10 @@ export default function TodayPage() {
                       <div className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
                         {currentCard.term}
                       </div>
-                      <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                      <div className="flex items-center gap-1">
+                        <SpeakButton text={article ? `${article} ${currentCard.term}` : currentCard.term} lang="de-DE" size="md" />
+                        <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                      </div>
                     </div>
                     <div className="text-sm text-text-muted">
                       {t.common.box} {currentCard.box}
@@ -317,7 +320,10 @@ export default function TodayPage() {
                       <span className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
                         {currentCard.term}
                       </span>
-                      <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                      <div className="flex items-center gap-1">
+                        <SpeakButton text={article ? `${article} ${currentCard.term}` : currentCard.term} lang="de-DE" size="md" />
+                        <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                      </div>
                     </div>
                     {currentCard.back_json.ipa && (
                       <span className="font-mono text-xs text-accent">[{currentCard.back_json.ipa}]</span>

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { StudyCard, StudyProgress } from '@/types';
-import { Button, Card, CardContent } from '@/components/ui';
+import { Button, Card, CardContent, CopyButton, SpeakButton } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import { getCardProgress, updateMasteryLevel } from '@/lib/study-progress';
 import { MasteryBadge } from './mastery-badge';
+import { getTermFontSize } from '@/lib/utils';
 
 interface StudyCardModalProps {
   card: StudyCard;
@@ -125,7 +126,13 @@ export function StudyCardModal({
               style={{ backfaceVisibility: 'hidden' }}
             >
               <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
-                <div className="text-3xl font-bold text-text mb-4">{card.front}</div>
+                <div className="flex items-center justify-center gap-2 mb-4 flex-wrap">
+                  <div className={`${getTermFontSize(card.front)} font-bold text-text break-words max-w-full`}>{card.front}</div>
+                  <div className="flex items-center gap-1">
+                    <SpeakButton text={card.front} lang="de-DE" size="md" />
+                    <CopyButton text={card.front} size="md" />
+                  </div>
+                </div>
                 {!showAnswer && (
                   <div className="text-sm text-text-muted flex items-center gap-2 mt-8">
                     <span className="opacity-60">👆</span>
@@ -147,7 +154,13 @@ export function StudyCardModal({
               <CardContent className="flex-1 flex flex-col overflow-hidden">
                 {/* Term Header */}
                 <div className="text-center pb-3 border-b mb-3 shrink-0">
-                  <div className="text-2xl font-bold text-text">{card.front}</div>
+                  <div className="flex items-center justify-center gap-2 mb-2 flex-wrap">
+                    <div className={`${getTermFontSize(card.front)} font-bold text-text break-words max-w-full`}>{card.front}</div>
+                    <div className="flex items-center gap-1">
+                      <SpeakButton text={card.front} lang="de-DE" size="md" />
+                      <CopyButton text={card.front} size="md" />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Scrollable Content */}

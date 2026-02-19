@@ -2,7 +2,7 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { Card as CardType } from '@/types';
-import { Card, CardContent, ArticleBadge, Badge, CopyButton, Button, Input } from '@/components/ui';
+import { Card, CardContent, ArticleBadge, Badge, CopyButton, SpeakButton, Button, Input } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import { getTermFontSize } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client';
@@ -238,7 +238,10 @@ export function CardDetailModal({
                     <span className={`${getTermFontSize(card.term)} font-bold text-text break-words max-w-full text-center`}>
                       {card.term}
                     </span>
-                    <CopyButton text={article ? `${article} ${card.term}` : card.term} size="md" />
+                    <div className="flex items-center gap-1">
+                      <SpeakButton text={article ? `${article} ${card.term}` : card.term} lang="de-DE" size="md" />
+                      <CopyButton text={article ? `${article} ${card.term}` : card.term} size="md" />
+                    </div>
                   </div>
                   <div className="flex items-center justify-center gap-2">
                     <Badge

@@ -67,15 +67,28 @@ export function getNextBox(currentBox: number, result: 'correct' | 'wrong'): num
 
 /**
  * Get responsive font size class based on term length
- * Handles long German compound words gracefully
+ * Mobile-first approach with standard readable sizes
  */
 export function getTermFontSize(term: string): string {
   const length = term.length;
-  if (length <= 10) return 'text-5xl md:text-6xl'; // Very large - short words
-  if (length <= 15) return 'text-4xl md:text-5xl'; // Large - normal words
-  if (length <= 20) return 'text-3xl md:text-4xl'; // Medium - longer words
-  if (length <= 30) return 'text-2xl md:text-3xl'; // Small - compound words
-  return 'text-xl md:text-2xl'; // Very small - very long compounds
+  
+  // Base size: 3xl (30px mobile) - suitable for 95% of use cases
+  // Only scale down for very long content
+  
+  if (length <= 25) {
+    return 'text-3xl md:text-4xl'; // 30px mobile, 36px desktop - standard
+  }
+  
+  if (length <= 40) {
+    return 'text-2xl md:text-3xl'; // 24px mobile, 30px desktop
+  }
+  
+  if (length <= 60) {
+    return 'text-xl md:text-2xl'; // 20px mobile, 24px desktop
+  }
+  
+  // Minimum readable size for very long sentences
+  return 'text-lg md:text-xl'; // 18px mobile, 20px desktop (minimum)
 }
 
 /**

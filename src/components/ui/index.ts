@@ -27,3 +27,4 @@ export {
 export { Toggle, toggleVariants, type ToggleProps } from './toggle';
 export { CalendarIcon, SunIcon, MoonIcon } from './icons';
 export { CopyButton } from './copy-button';
+export { SpeakButton } from './speak-button';
