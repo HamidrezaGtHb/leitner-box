@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Nav } from '@/components/nav';
 import { StudyCardModal } from '@/components/study-card-modal';
@@ -67,19 +67,24 @@ export default function StudyCategoryPage() {
     );
   }
 
-  // Get cards based on selected subcategory and filter level
-  const allCards = getStudyCardsByCategory(category);
-  let displayCards = selectedSubcategory
-    ? getStudyCardsBySubcategory(category, selectedSubcategory)
-    : allCards;
+  // Get cards based on selected subcategory and filter level (optimized with useMemo)
+  const allCards = useMemo(() => getStudyCardsByCategory(category), [category]);
+  
+  const displayCards = useMemo(() => {
+    let cards = selectedSubcategory
+      ? getStudyCardsBySubcategory(category, selectedSubcategory)
+      : allCards;
 
-  // Apply mastery level filter
-  if (filterLevel !== null) {
-    displayCards = displayCards.filter(card => {
-      const progress = progressMap.get(card.id);
-      return (progress?.mastery_level ?? 0) === filterLevel;
-    });
-  }
+    // Apply mastery level filter
+    if (filterLevel !== null) {
+      cards = cards.filter(card => {
+        const progress = progressMap.get(card.id);
+        return (progress?.mastery_level ?? 0) === filterLevel;
+      });
+    }
+    
+    return cards;
+  }, [category, selectedSubcategory, allCards, filterLevel, progressMap]);
 
   const handleCardClick = (index: number) => {
     setSelectedCardIndex(index);

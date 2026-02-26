@@ -151,109 +151,28 @@ export async function generateCardBack(params: {
   pos?: string;
   apiKey?: string | null;
 }): Promise<CardBackJSON> {
-  const prompt = `SYSTEM:
-You are a German Language Database and expert flashcard content designer.
-Output ONLY valid JSON (no markdown, no commentary). The JSON must match the schema exactly.
-Use Persian for meanings, German for examples.
+  const prompt = `You are a German flashcard content generator. Output ONLY valid JSON.
+Use Persian for meanings, German for examples. All content must be 100% accurate and verified.
 
-CRITICAL ACCURACY RULES - VERIFY BEFORE GENERATING:
-1. ✓ ALL meanings are 100% accurate - double-check against your knowledge
-2. ✓ Examples are grammatically PERFECT native German sentences
-3. ✓ Persian translations match the German meaning PRECISELY
-4. ✓ NO invented words, collocations, or idioms - only REAL verified vocabulary
-5. ✓ Grammar information (article, plural, verb forms) is CORRECT
-6. ✓ Examples sound NATURAL to native German speakers (not translation-like)
-7. ✓ Each example Persian translation is accurate to that specific German sentence
+TERM: ${params.term}
+LEVEL: ${params.level || 'B1'}
+POS: ${params.pos || 'auto-detect'}
 
-QUALITY CHECKLIST (mental verification):
-- [ ] Term exists in standard German dictionaries
-- [ ] Meanings verified from multiple mental sources
-- [ ] Examples are authentic German (not English → German translations)
-- [ ] Persian translations are contextually precise
-- [ ] Collocations are real and commonly used
-- [ ] Grammar forms are verified
+REQUIREMENTS:
+- 2-4 Persian meanings (meaning_fa)
+- 2 German example sentences with Persian translations and register tag (formal/informal/colloquial)
+- 2-4 real collocations
+- 2-4 word_family members (e.g., for "fahren": ["der Fahrer", "die Fahrt", "erfahren"])
+- usage_context: {register, colloquial_alternative (if formal, else null), contexts [1-2]}
+- 1-2 synonyms (or antonyms for adjectives)
+- Grammar based on POS:
+  * NOUN: article (der/die/das), plural
+  * VERB: prasens (3rd sg), praeteritum, perfekt_aux (haben/sein), partizip2, separable (bool), prepositions [{preposition, case, example}]
+  * ADJECTIVE: comparative, superlative
+- learning_tips: [] (empty)
+- Examples must be natural German (B1-C1), not translations
 
-USER INPUT:
-term: ${params.term}
-level: ${params.level || 'B1'}
-pos_hint: ${params.pos || 'auto-detect'}
-
-────────────────
-TASK:
-1. VERIFY the term exists and is correct German vocabulary
-2. IDENTIFY the type: Verb, Noun, Adjective, Adverb, Nomen-Verb Verbindung, Idiom, or Phrase
-3. Generate ONLY verified, accurate information for that type
-
-────────────────
-RULES:
-- Practical, everyday German (B1–C1)
-- Examples MUST be authentic natural German sentences
-- ALWAYS include 2-4 REAL collocations (commonly used combinations)
-- ALWAYS include exactly 2 natural examples with accurate register tags — REQUIRED
-- Each example MUST have a "register" field: "formal", "informal", or "colloquial"
-- word_family: 2-4 REAL related words from the same word family (e.g. for "fahren" → ["der Fahrer", "die Fahrt", "die Abfahrt", "erfahren"])
-- usage_context: {
-    register: "formal" | "informal" | "colloquial" (overall register of this term)
-    colloquial_alternative: "string" (روزمره equivalent if this term is formal, or null)
-    contexts: ["string"] (1-2 situations where this word is used, e.g. ["business", "daily conversation"])
-  }
-- learning_tips: always empty array []
-
-────────────────
-TYPE-SPECIFIC:
-
-VERB:
-- grammar.verb: prasens (3rd person singular, e.g. "er wartet"), praeteritum, perfekt_aux, partizip2, separable
-- grammar.prepositions: Array of {preposition, case, example} — e.g. [{"preposition":"auf","case":"Akk","example":"Ich warte auf den Bus."}]
-- synonyms: 1-2
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- word_family: 2-4 related words
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-NOUN:
-- grammar.noun: article (der/die/das), plural
-- grammar.prepositions: if the noun has typical preposition usage
-- synonyms: 1-2
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- word_family: 2-4 related words
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-ADJECTIVE:
-- grammar.adjective: comparative, superlative
-- synonyms OR antonyms: 1-2
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- word_family: 2-4 related words
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-NOMEN-VERB VERBINDUNG (pos: "nomen-verb"):
-- grammar.verb: verb conjugation info
-- register_note: variations/alternative forms
-- synonyms: 1-2 alternative expressions
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- word_family: 2-4 related words
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-IDIOM (pos: "idiom"):
-- meaning_fa: clear explanation
-- register_note: origin or context
-- synonyms: 1-2 equivalent expressions
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-PHRASE (pos: "phrase"):
-- register_note: formal/informal context
-- synonyms: 1-2 alternatives
-- examples: 2 (with register tag) — REQUIRED
-- collocations: 2-4
-- usage_context: register, colloquial_alternative (if formal), contexts
-
-────────────────
-OUTPUT JSON SCHEMA:
+JSON SCHEMA:
 {
   "term": "string",
   "language": "de",
@@ -268,11 +187,7 @@ OUTPUT JSON SCHEMA:
   "collocations": ["string"],
   "register_note": "string|null",
   "word_family": ["string"],
-  "usage_context": {
-    "register": "formal|informal|colloquial",
-    "colloquial_alternative": "string|null",
-    "contexts": ["string"]
-  },
+  "usage_context": {"register":"formal|informal|colloquial","colloquial_alternative":"string|null","contexts":["string"]},
   "grammar": {
     "noun": {"article":"der|die|das|null","plural":"string|null"},
     "verb": {"perfekt_aux":"haben|sein|null","partizip2":"string|null","praeteritum":"string|null","prasens":"string|null","rektion":"string|null","valency":"string|null","separable":"boolean|null"},

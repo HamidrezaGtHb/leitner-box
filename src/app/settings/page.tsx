@@ -79,7 +79,7 @@ export default function SettingsPage() {
 
     const { data } = await supabase
       .from('settings')
-      .select('*')
+      .select('user_id, intervals, daily_limit, hide_future_cards, gemini_api_key, created_at, updated_at')
       .eq('user_id', user.id)
       .single();
 

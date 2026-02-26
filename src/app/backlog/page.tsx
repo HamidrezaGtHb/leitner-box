@@ -10,6 +10,7 @@ import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
 import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
 import { CSVImportDialog } from '@/components/csv-import-dialog';
 import { ManualCardDialog } from '@/components/manual-card-dialog';
+import { AILoadingModal } from '@/components/ai-loading-modal';
 import { Button, Card, CardContent, Input } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
@@ -23,6 +24,7 @@ export default function BacklogPage() {
   const [showOCRDialog, setShowOCRDialog] = useState(false);
   const [showCSVDialog, setShowCSVDialog] = useState(false);
   const [showManualDialog, setShowManualDialog] = useState(false);
+  const [showAILoading, setShowAILoading] = useState(false);
   const [manualItem, setManualItem] = useState<BacklogItem | null>(null);
   const [availableSlots, setAvailableSlots] = useState(0);
   const [dailyLimit, setDailyLimit] = useState(10);
@@ -42,7 +44,7 @@ export default function BacklogPage() {
 
     const { data } = await supabase
       .from('backlog')
-      .select('*')
+      .select('id, term, term_normalized, level, pos, topic, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -106,21 +108,23 @@ export default function BacklogPage() {
 
   const handleConvertToCard = async (item: BacklogItem) => {
     setConverting(item.id);
-
-    const loadingToast = toast.loading(t.backlog.generatingAI);
+    setShowAILoading(true);
 
     try {
       const result = await completeBacklogToCardAction(item.id, 'ai');
 
+      setShowAILoading(false);
+
       if (result.success) {
-        toast.success(t.backlog.cardCreated, { id: loadingToast });
+        toast.success(t.backlog.cardCreated);
         loadBacklog();
       } else {
-        toast.error(result.error, { id: loadingToast });
+        toast.error(result.error);
       }
     } catch (error) {
       console.error('Error:', error);
-      toast.error(t.backlog.cardError, { id: loadingToast });
+      setShowAILoading(false);
+      toast.error(t.backlog.cardError);
     } finally {
       setConverting(null);
     }
@@ -331,6 +335,9 @@ export default function BacklogPage() {
           onOpenChange={setShowManualDialog}
           onSuccess={loadBacklog}
         />
+
+        {/* AI Loading Modal */}
+        <AILoadingModal open={showAILoading} estimatedTime={8} />
       </div>
     </div>
   );

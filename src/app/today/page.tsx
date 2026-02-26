@@ -79,7 +79,7 @@ export default function TodayPage() {
     // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase
       .from('cards')
-      .select('*')
+      .select('id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at')
       .eq('user_id', user.id)
       .lte('due_date', today)
       .order('box', { ascending: true })

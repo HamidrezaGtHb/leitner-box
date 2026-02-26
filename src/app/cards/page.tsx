@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { Card as CardType, Settings } from '@/types';
@@ -26,10 +26,73 @@ const DEFAULT_SETTINGS: Settings = {
   updated_at: new Date().toISOString(),
 };
 
+// Memoized Card Item Component for better performance
+const CardItem = memo(({ 
+  card, 
+  hidden, 
+  variant, 
+  onCardClick,
+  t 
+}: { 
+  card: CardType; 
+  hidden: boolean; 
+  variant: 'default' | 'der' | 'die' | 'das';
+  onCardClick: () => void;
+  t: any;
+}) => {
+  const article = card.back_json.grammar.noun?.article;
+
+  return (
+    <Card
+      variant={variant}
+      padding="md"
+      className={`cursor-pointer hover:shadow-lg transition-shadow ${hidden ? 'opacity-50' : ''}`}
+      onClick={onCardClick}
+    >
+      <CardContent className="space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex-1 min-w-0">
+            {hidden ? (
+              <span className="text-text-muted text-lg">🔒 {t.cards.hidden}</span>
+            ) : (
+              <div className="flex items-center gap-2">
+                {article && <ArticleBadge article={article} size="sm" />}
+                <span className="font-semibold text-lg text-text">{card.term}</span>
+                <CopyButton text={article ? `${article} ${card.term}` : card.term} size="sm" />
+              </div>
+            )}
+          </div>
+        </div>
+
+        {hidden ? (
+          <div className="text-sm text-text-muted py-4 text-center">
+            <div>📅 {t.common.review}: {card.due_date}</div>
+            <div className="text-xs mt-1">{t.cards.hiddenForReview}</div>
+          </div>
+        ) : (
+          <>
+            <div className="text-sm text-text-muted line-clamp-2">
+              {card.back_json.meaning_fa[0]}
+            </div>
+            <div className="text-xs text-text-muted">
+              📅 {card.due_date}
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
+
+CardItem.displayName = 'CardItem';
+
 export default function CardsPage() {
   const [cards, setCards] = useState<CardType[]>([]);
   const [filterBox, setFilterBox] = useState<number>(1);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  const [page, setPage] = useState(0);
   const [editingCard, setEditingCard] = useState<CardType | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalCards, setModalCards] = useState<CardType[]>([]);
@@ -42,12 +105,22 @@ export default function CardsPage() {
     accuracy: 0,
     boxDistribution: {} as Record<number, number>,
   });
+  const [loadingStats, setLoadingStats] = useState(true);
   const supabase = createClient();
   const { t } = useLanguage();
+
+  const CARDS_PER_PAGE = 100;
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Lazy load stats after initial card load
+  useEffect(() => {
+    if (!loading) {
+      loadStats();
+    }
+  }, [loading]);
 
   const loadData = async () => {
     const {
@@ -57,19 +130,34 @@ export default function CardsPage() {
 
     const { data: settingsData } = await supabase
       .from('settings')
-      .select('*')
+      .select('user_id, intervals, daily_limit, hide_future_cards, gemini_api_key, created_at, updated_at')
       .eq('user_id', user.id)
       .single();
 
     setSettings(settingsData || DEFAULT_SETTINGS);
 
-    const { data } = await supabase
+    const { data, count } = await supabase
       .from('cards')
-      .select('*')
+      .select('id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
       .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .range(0, 99);
 
     setCards(data || []);
+    setHasMore((count || 0) > (data?.length || 0));
+    
+    // Set totalCards immediately from count
+    setStats(prev => ({ ...prev, totalCards: count || 0 }));
+
+    setLoading(false);
+  };
+
+  const loadStats = async () => {
+    setLoadingStats(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
 
     const [streak, accuracy, boxDistribution, reviewsCount] = await Promise.all([
       calculateStreak(supabase, user.id),
@@ -81,15 +169,39 @@ export default function CardsPage() {
         .eq('user_id', user.id),
     ]);
 
-    setStats({
-      totalCards: data?.length || 0,
+    setStats(prev => ({
+      ...prev,
       totalReviews: reviewsCount.count || 0,
       streak,
       accuracy,
       boxDistribution,
-    });
+    }));
 
-    setLoading(false);
+    setLoadingStats(false);
+  };
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore) return;
+    
+    setLoadingMore(true);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const startRange = cards.length;
+    const endRange = startRange + 99;
+
+    const { data } = await supabase
+      .from('cards')
+      .select('id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .range(startRange, endRange);
+
+    setCards(prev => [...prev, ...(data || [])]);
+    setHasMore((data?.length || 0) === 100);
+    setLoadingMore(false);
   };
 
   const today = formatDate(new Date());
@@ -109,8 +221,15 @@ export default function CardsPage() {
     return 'default' as const;
   };
 
-  const filteredCards = cards.filter((card) => card.box === filterBox);
-  const visibleCards = filteredCards.filter(c => !isCardHidden(c));
+  const filteredCards = useMemo(
+    () => cards.filter((card) => card.box === filterBox),
+    [cards, filterBox]
+  );
+  
+  const visibleCards = useMemo(
+    () => filteredCards.filter(c => !isCardHidden(c)),
+    [filteredCards, settings.hide_future_cards]
+  );
 
   const openCardModal = (cardsArray: CardType[], index: number) => {
     setModalCards(cardsArray);
@@ -166,15 +285,21 @@ export default function CardsPage() {
                 <div className="text-sm text-gray-600">{t.cards.totalWords}</div>
               </div>
               <div className="text-center p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl">
-                <div className="text-3xl font-bold text-emerald-600">{stats.totalReviews}</div>
+                <div className="text-3xl font-bold text-emerald-600">
+                  {loadingStats ? '...' : stats.totalReviews}
+                </div>
                 <div className="text-sm text-gray-600">{t.cards.totalReviews}</div>
               </div>
               <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl">
-                <div className="text-3xl font-bold text-amber-600">{stats.streak}</div>
+                <div className="text-3xl font-bold text-amber-600">
+                  {loadingStats ? '...' : stats.streak}
+                </div>
                 <div className="text-sm text-gray-600">{t.cards.streak}</div>
               </div>
               <div className="text-center p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
-                <div className="text-3xl font-bold text-purple-600">{stats.accuracy}%</div>
+                <div className="text-3xl font-bold text-purple-600">
+                  {loadingStats ? '...' : `${stats.accuracy}%`}
+                </div>
                 <div className="text-sm text-gray-600">{t.cards.accuracy}</div>
               </div>
             </div>
@@ -254,58 +379,42 @@ export default function CardsPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {filteredCards.map((card, index) => {
+            {filteredCards.map((card) => {
               const hidden = isCardHidden(card);
               const article = card.back_json.grammar.noun?.article;
               const cardVariant = getCardVariant(article);
 
               return (
-                <Card
+                <CardItem
                   key={card.id}
+                  card={card}
+                  hidden={hidden}
                   variant={cardVariant}
-                  padding="md"
-                  className={`cursor-pointer hover:shadow-lg transition-shadow ${hidden ? 'opacity-50' : ''}`}
-                  onClick={() => {
+                  t={t}
+                  onCardClick={() => {
                     if (!hidden) {
                       const visibleIndex = visibleCards.findIndex(c => c.id === card.id);
                       openCardModal(visibleCards, visibleIndex);
                     }
                   }}
-                >
-                  <CardContent className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        {hidden ? (
-                          <span className="text-text-muted text-lg">🔒 {t.cards.hidden}</span>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            {article && <ArticleBadge article={article} size="sm" />}
-                            <span className="font-semibold text-lg text-text">{card.term}</span>
-                            <CopyButton text={article ? `${article} ${card.term}` : card.term} size="sm" />
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {hidden ? (
-                      <div className="text-sm text-text-muted py-4 text-center">
-                        <div>📅 {t.common.review}: {card.due_date}</div>
-                        <div className="text-xs mt-1">{t.cards.hiddenForReview}</div>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-sm text-text-muted line-clamp-2">
-                          {card.back_json.meaning_fa[0]}
-                        </div>
-                        <div className="text-xs text-text-muted">
-                          📅 {card.due_date}
-                        </div>
-                      </>
-                    )}
-                  </CardContent>
-                </Card>
+                />
               );
             })}
+          </div>
+        )}
+
+        {/* Load More Button */}
+        {!loading && filteredCards.length > 0 && hasMore && (
+          <div className="flex justify-center mt-6">
+            <Button
+              variant="secondary"
+              size="md"
+              onClick={loadMore}
+              loading={loadingMore}
+              disabled={loadingMore}
+            >
+              {loadingMore ? t.common.loading : `${t.common.loadMore} (${stats.totalCards - cards.length} ${t.common.remaining})`}
+            </Button>
           </div>
         )}
 

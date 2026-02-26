@@ -7,12 +7,19 @@ export async function calculateStreak(
   supabase: SupabaseClient,
   userId: string
 ): Promise<number> {
-  // Get all review dates (distinct dates)
+  // Calculate date 30 days ago for performance optimization
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const thirtyDaysAgoStr = thirtyDaysAgo.toISOString();
+
+  // Get reviews from last 30 days only (performance optimization)
   const { data: reviews } = await supabase
     .from('reviews')
     .select('reviewed_at')
     .eq('user_id', userId)
-    .order('reviewed_at', { ascending: false });
+    .gte('reviewed_at', thirtyDaysAgoStr)
+    .order('reviewed_at', { ascending: false })
+    .limit(1000);
 
   if (!reviews || reviews.length === 0) {
     return 0;
@@ -52,6 +59,7 @@ export async function calculateStreak(
 
 /**
  * Calculate review accuracy (percentage of correct answers)
+ * Optimized to fetch only last 1000 reviews for performance
  */
 export async function calculateAccuracy(
   supabase: SupabaseClient,
@@ -60,7 +68,9 @@ export async function calculateAccuracy(
   const { data: reviews } = await supabase
     .from('reviews')
     .select('result')
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    .order('reviewed_at', { ascending: false })
+    .limit(1000);
 
   if (!reviews || reviews.length === 0) {
     return 0;
