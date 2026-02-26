@@ -44,7 +44,7 @@ export default function BacklogPage() {
 
     const { data } = await supabase
       .from('backlog')
-      .select('id, term, term_normalized, level, pos, topic, created_at')
+      .select('id, user_id, term, term_normalized, level, pos, topic, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
