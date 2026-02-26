@@ -138,7 +138,7 @@ export default function CardsPage() {
 
     const { data, count } = await supabase
       .from('cards')
-      .select('id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
+      .select('id, user_id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(0, 99);
@@ -194,7 +194,7 @@ export default function CardsPage() {
 
     const { data } = await supabase
       .from('cards')
-      .select('id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
+      .select('id, user_id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at', { count: 'exact' })
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .range(startRange, endRange);
