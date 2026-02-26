@@ -36,6 +36,8 @@ export const translations = {
       hours: 'hours',
       review: 'Review',
       plural: 'Plural',
+      loadMore: 'Load More',
+      remaining: 'remaining',
     },
 
     // Login page
@@ -351,6 +353,8 @@ export const translations = {
       hours: 'Stunden',
       review: 'Überprüfung',
       plural: 'Plural',
+      loadMore: 'Mehr laden',
+      remaining: 'übrig',
     },
 
     // Login page
