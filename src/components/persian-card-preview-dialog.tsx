@@ -12,7 +12,6 @@ interface PersianCardPreviewDialogProps {
   onPersianChange: (text: string) => void;
   onGermanChange: (text: string) => void;
   onAddToBacklog: () => void;
-  onCreateCardNow: () => void;
 }
 
 export function PersianCardPreviewDialog({
@@ -23,7 +22,6 @@ export function PersianCardPreviewDialog({
   onPersianChange,
   onGermanChange,
   onAddToBacklog,
-  onCreateCardNow,
 }: PersianCardPreviewDialogProps) {
   const { t } = useLanguage();
   const [localPersian, setLocalPersian] = useState(persianText);
@@ -40,12 +38,6 @@ export function PersianCardPreviewDialog({
     onPersianChange(localPersian);
     onGermanChange(localGerman);
     onAddToBacklog();
-  };
-
-  const handleCreateCardNow = () => {
-    onPersianChange(localPersian);
-    onGermanChange(localGerman);
-    onCreateCardNow();
   };
 
   return (
@@ -101,36 +93,23 @@ export function PersianCardPreviewDialog({
           </div>
 
           {/* Actions */}
-          <div className="space-y-3 pt-4 border-t border-border">
-            {/* Two main actions */}
-            <div className="flex gap-3">
-              <Button
-                variant="success"
-                size="md"
-                className="flex-1 min-h-[44px]"
-                onClick={handleCreateCardNow}
-                disabled={!localPersian.trim() || !localGerman.trim()}
-              >
-                ➕ {t.backlog.createCardNow}
-              </Button>
-              <Button
-                variant="primary"
-                size="md"
-                className="flex-1 min-h-[44px]"
-                onClick={handleAddToBacklog}
-                disabled={!localPersian.trim() || !localGerman.trim()}
-              >
-                📋 {t.backlog.addToBacklog}
-              </Button>
-            </div>
-            {/* Cancel button */}
+          <div className="flex gap-3 pt-4 border-t border-border">
             <Button
               variant="secondary"
               size="md"
-              className="w-full min-h-[44px]"
+              className="flex-1 min-h-[44px]"
               onClick={() => onOpenChange(false)}
             >
               {t.common.cancel}
+            </Button>
+            <Button
+              variant="primary"
+              size="md"
+              className="flex-1 min-h-[44px]"
+              onClick={handleAddToBacklog}
+              disabled={!localPersian.trim() || !localGerman.trim()}
+            >
+              ➕ {t.backlog.addToBacklog}
             </Button>
           </div>
         </CardContent>

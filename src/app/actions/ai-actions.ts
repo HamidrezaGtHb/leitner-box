@@ -366,7 +366,7 @@ export async function addTermToBacklogAction(
 }
 
 /**
- * Server Action: Translate Persian to German
+ * Server Action: Translate Persian to German (quick translation for preview)
  */
 export async function translatePersianToGermanAction(
   persianText: string
@@ -427,6 +427,102 @@ Reply with ONLY the German translation, nothing else.`;
     return {
       success: false,
       error: error.message || 'Translation failed. Please try again.',
+    };
+  }
+}
+
+/**
+ * Server Action: Generate rich card back for Persian→German cards
+ */
+export async function generatePersianCardBackAction(
+  persianText: string
+): Promise<
+  | {
+      success: true;
+      translations: string[];
+      examples: Array<{ de: string; fa: string }>;
+      level: string;
+      register: string;
+    }
+  | { success: false; error: string }
+> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
+      };
+    }
+
+    // Get user's API key or use default
+    const userApiKey = await getUserApiKey(supabase, user.id);
+    const apiKey = userApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return {
+        success: false,
+        error: 'No API key available. Please set your Gemini API key in Settings.',
+      };
+    }
+
+    // Use Gemini to generate comprehensive card back
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `You are a German language teacher creating flashcard content for Persian speakers learning German.
+
+Persian sentence: "${persianText}"
+
+Generate a focused, practical card back with:
+1. 2-3 natural German translations (B1-C1 level, work/life contexts)
+2. 2-3 example sentences showing usage (German + Persian)
+3. CEFR level (B1, B2, or C1)
+4. Register (formal, informal, or neutral)
+
+Reply ONLY with valid JSON (no markdown, no explanation):
+{
+  "translations": ["translation1", "translation2", "translation3"],
+  "examples": [
+    {"de": "German example", "fa": "Persian translation"},
+    {"de": "German example", "fa": "Persian translation"}
+  ],
+  "level": "B2",
+  "register": "neutral"
+}`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const text = response.text().trim();
+
+    // Clean markdown if present
+    const jsonText = text.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    const data = JSON.parse(jsonText);
+
+    if (!data.translations || !data.examples || !data.level || !data.register) {
+      return {
+        success: false,
+        error: 'Invalid AI response format',
+      };
+    }
+
+    return {
+      success: true,
+      translations: data.translations,
+      examples: data.examples,
+      level: data.level,
+      register: data.register,
+    };
+  } catch (error: any) {
+    console.error('generatePersianCardBackAction error:', error);
+    return {
+      success: false,
+      error: error.message || 'Generation failed. Please try again.',
     };
   }
 }

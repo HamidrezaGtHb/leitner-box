@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client';
 import { Nav } from '@/components/nav';
 import { BacklogItem } from '@/types';
 import { normalizeTerm, calculateAvailableNewCardSlots } from '@/lib/utils';
-import { completeBacklogToCardAction } from '@/app/actions/ai-actions';
+import { completeBacklogToCardAction, generatePersianCardBackAction } from '@/app/actions/ai-actions';
 import { BatchGenerateDialog } from '@/components/batch-generate-dialog';
 import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
 import { CSVImportDialog } from '@/components/csv-import-dialog';
@@ -192,86 +192,13 @@ export default function BacklogPage() {
     }
   };
 
-  const handleCreateCardNow = async () => {
-    if (!persianSentence.trim() || !germanTranslation.trim()) {
-      toast.error(t.backlog.editBothSides);
-      return;
-    }
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      toast.error(t.errors.pleaseLogin);
-      return;
-    }
-
-    // Check available slots
-    const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
-    if (slotsData.availableSlots <= 0) {
-      toast.error('Daily limit reached. Review existing cards first.');
-      return;
-    }
-
-    const normalized = normalizeTerm(persianSentence);
-
-    // Create card directly
-    const cardBack = {
-      term: persianSentence.trim(),
-      language: 'de' as const,
-      level: 'B1',
-      pos: 'phrase' as const,
-      ipa: null,
-      meaning_fa: [germanTranslation.trim()],
-      meaning_en: [],
-      examples: [
-        {
-          de: germanTranslation.trim(),
-          fa: persianSentence.trim(),
-          note: null,
-        }
-      ],
-      synonyms: [],
-      antonyms: [],
-      collocations: [],
-      register_note: null,
-      grammar: {},
-      learning_tips: [],
-    };
-
-    const { error } = await supabase.from('cards').insert({
-      user_id: user.id,
-      term: persianSentence.trim(),
-      term_normalized: normalized,
-      level: 'B1',
-      pos: 'phrase',
-      box: 1,
-      due_date: new Date().toISOString().split('T')[0],
-      back_json: cardBack,
-      direction: 'fa-de',
-    });
-
-    if (error) {
-      if (error.code === '23505') {
-        toast.error('This card already exists');
-      } else {
-        toast.error('Error creating card');
-        console.error('Error creating card:', error);
-      }
-    } else {
-      toast.success(t.backlog.cardCreated);
-      setPersianSentence('');
-      setGermanTranslation('');
-      setShowPreviewDialog(false);
-      loadBacklog();
-    }
-  };
 
   const handleConvertToCard = async (item: BacklogItem) => {
     setConverting(item.id);
 
-    // For Persian sentences, create card directly without AI
+    // For Persian sentences, use AI to generate focused card back
     if (item.direction === 'fa-de') {
+      setShowAILoading(true);
       try {
         const {
           data: { user },
@@ -279,6 +206,7 @@ export default function BacklogPage() {
         if (!user) {
           toast.error(t.errors.pleaseLogin);
           setConverting(null);
+          setShowAILoading(false);
           return;
         }
 
@@ -287,36 +215,38 @@ export default function BacklogPage() {
         if (slotsData.availableSlots <= 0) {
           toast.error('Daily limit reached. Review existing cards first.');
           setConverting(null);
+          setShowAILoading(false);
           return;
         }
 
-        const germanTranslation = (item.metadata as any)?.germanTranslation || '';
+        // Generate rich card back with AI
+        const result = await generatePersianCardBackAction(item.term);
         
-        if (!germanTranslation) {
-          toast.error('Missing German translation');
+        if (!result.success) {
+          toast.error(result.error || 'Failed to generate card content');
           setConverting(null);
+          setShowAILoading(false);
           return;
         }
 
+        // Build minimalist card back
         const cardBack = {
           term: item.term,
           language: 'de' as const,
-          level: 'B1',
+          level: result.level,
           pos: 'phrase' as const,
           ipa: null,
-          meaning_fa: [germanTranslation],
+          meaning_fa: result.translations,
           meaning_en: [],
-          examples: [
-            {
-              de: germanTranslation,
-              fa: item.term,
-              note: null,
-            }
-          ],
+          examples: result.examples.map(ex => ({
+            de: ex.de,
+            fa: ex.fa,
+            note: null,
+          })),
           synonyms: [],
           antonyms: [],
           collocations: [],
-          register_note: null,
+          register_note: result.register,
           grammar: {},
           learning_tips: [],
         };
@@ -325,7 +255,7 @@ export default function BacklogPage() {
           user_id: user.id,
           term: item.term,
           term_normalized: item.term_normalized,
-          level: 'B1',
+          level: result.level,
           pos: 'phrase',
           box: 1,
           due_date: new Date().toISOString().split('T')[0],
@@ -341,17 +271,20 @@ export default function BacklogPage() {
             console.error('Error creating card:', cardError);
           }
           setConverting(null);
+          setShowAILoading(false);
           return;
         }
 
         // Delete from backlog
         await supabase.from('backlog').delete().eq('id', item.id);
         
+        setShowAILoading(false);
         toast.success(t.backlog.cardCreated);
         loadBacklog();
       } catch (error) {
         toast.error(t.backlog.cardError);
         console.error('Error converting Persian card:', error);
+        setShowAILoading(false);
       } finally {
         setConverting(null);
       }
@@ -683,7 +616,6 @@ export default function BacklogPage() {
           onPersianChange={setPersianSentence}
           onGermanChange={setGermanTranslation}
           onAddToBacklog={handleAddPersianToBacklog}
-          onCreateCardNow={handleCreateCardNow}
         />
       </div>
     </div>
