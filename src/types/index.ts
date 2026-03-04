@@ -81,6 +81,7 @@ export interface BacklogItem {
   pos: string | null;
   topic: string | null;
   direction: CardDirection;
+  metadata?: { germanTranslation?: string; [key: string]: any } | null;
   created_at: string;
 }
 

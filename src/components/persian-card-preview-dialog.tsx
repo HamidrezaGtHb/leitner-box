@@ -11,7 +11,8 @@ interface PersianCardPreviewDialogProps {
   germanText: string;
   onPersianChange: (text: string) => void;
   onGermanChange: (text: string) => void;
-  onSave: () => void;
+  onAddToBacklog: () => void;
+  onCreateCardNow: () => void;
 }
 
 export function PersianCardPreviewDialog({
@@ -21,7 +22,8 @@ export function PersianCardPreviewDialog({
   germanText,
   onPersianChange,
   onGermanChange,
-  onSave,
+  onAddToBacklog,
+  onCreateCardNow,
 }: PersianCardPreviewDialogProps) {
   const { t } = useLanguage();
   const [localPersian, setLocalPersian] = useState(persianText);
@@ -34,10 +36,16 @@ export function PersianCardPreviewDialog({
 
   if (!open) return null;
 
-  const handleSave = () => {
+  const handleAddToBacklog = () => {
     onPersianChange(localPersian);
     onGermanChange(localGerman);
-    onSave();
+    onAddToBacklog();
+  };
+
+  const handleCreateCardNow = () => {
+    onPersianChange(localPersian);
+    onGermanChange(localGerman);
+    onCreateCardNow();
   };
 
   return (
@@ -93,23 +101,36 @@ export function PersianCardPreviewDialog({
           </div>
 
           {/* Actions */}
-          <div className="flex gap-3 pt-4 border-t border-border">
+          <div className="space-y-3 pt-4 border-t border-border">
+            {/* Two main actions */}
+            <div className="flex gap-3">
+              <Button
+                variant="success"
+                size="md"
+                className="flex-1 min-h-[44px]"
+                onClick={handleCreateCardNow}
+                disabled={!localPersian.trim() || !localGerman.trim()}
+              >
+                ➕ {t.backlog.createCardNow}
+              </Button>
+              <Button
+                variant="primary"
+                size="md"
+                className="flex-1 min-h-[44px]"
+                onClick={handleAddToBacklog}
+                disabled={!localPersian.trim() || !localGerman.trim()}
+              >
+                📋 {t.backlog.addToBacklog}
+              </Button>
+            </div>
+            {/* Cancel button */}
             <Button
               variant="secondary"
               size="md"
-              className="flex-1 min-h-[44px]"
+              className="w-full min-h-[44px]"
               onClick={() => onOpenChange(false)}
             >
               {t.common.cancel}
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              className="flex-1 min-h-[44px]"
-              onClick={handleSave}
-              disabled={!localPersian.trim() || !localGerman.trim()}
-            >
-              {t.backlog.saveCard}
             </Button>
           </div>
         </CardContent>

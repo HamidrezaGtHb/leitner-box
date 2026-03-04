@@ -50,9 +50,8 @@ export default function BacklogPage() {
 
     const { data } = await supabase
       .from('backlog')
-      .select('id, user_id, term, term_normalized, level, pos, topic, direction, created_at')
+      .select('id, user_id, term, term_normalized, level, pos, topic, direction, metadata, created_at')
       .eq('user_id', user.id)
-      .eq('direction', 'de-fa') // Only show German words in backlog list
       .order('created_at', { ascending: false });
 
     setBacklog(data || []);
@@ -66,7 +65,7 @@ export default function BacklogPage() {
     setLoading(false);
   };
 
-  const handleAddToBacklog = async (e: React.FormEvent) => {
+  const handleAddGermanToBacklog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTerm.trim()) return;
 
@@ -148,7 +147,52 @@ export default function BacklogPage() {
     }
   };
 
-  const handleSavePersianCard = async () => {
+  const handleAddPersianToBacklog = async () => {
+    if (!persianSentence.trim() || !germanTranslation.trim()) {
+      toast.error(t.backlog.editBothSides);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error(t.errors.pleaseLogin);
+      return;
+    }
+
+    const normalized = normalizeTerm(persianSentence);
+
+    // Store Persian sentence with translation in metadata
+    const metadata = {
+      germanTranslation: germanTranslation.trim(),
+    };
+
+    const { error } = await supabase.from('backlog').insert({
+      user_id: user.id,
+      term: persianSentence.trim(),
+      term_normalized: normalized,
+      direction: 'fa-de',
+      metadata: metadata,
+    });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error(t.backlog.alreadyInBacklog);
+      } else {
+        toast.error(t.backlog.addError);
+        console.error('Error adding to backlog:', error);
+      }
+    } else {
+      toast.success(t.backlog.addedToBacklog);
+      setPersianSentence('');
+      setGermanTranslation('');
+      setShowPreviewDialog(false);
+      loadBacklog();
+    }
+  };
+
+  const handleCreateCardNow = async () => {
     if (!persianSentence.trim() || !germanTranslation.trim()) {
       toast.error(t.backlog.editBothSides);
       return;
@@ -171,7 +215,7 @@ export default function BacklogPage() {
 
     const normalized = normalizeTerm(persianSentence);
 
-    // Create card directly (skip backlog)
+    // Create card directly
     const cardBack = {
       term: persianSentence.trim(),
       language: 'de' as const,
@@ -225,8 +269,97 @@ export default function BacklogPage() {
 
   const handleConvertToCard = async (item: BacklogItem) => {
     setConverting(item.id);
-    setShowAILoading(true);
 
+    // For Persian sentences, create card directly without AI
+    if (item.direction === 'fa-de') {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error(t.errors.pleaseLogin);
+          setConverting(null);
+          return;
+        }
+
+        // Check available slots
+        const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
+        if (slotsData.availableSlots <= 0) {
+          toast.error('Daily limit reached. Review existing cards first.');
+          setConverting(null);
+          return;
+        }
+
+        const germanTranslation = (item.metadata as any)?.germanTranslation || '';
+        
+        if (!germanTranslation) {
+          toast.error('Missing German translation');
+          setConverting(null);
+          return;
+        }
+
+        const cardBack = {
+          term: item.term,
+          language: 'de' as const,
+          level: 'B1',
+          pos: 'phrase' as const,
+          ipa: null,
+          meaning_fa: [germanTranslation],
+          meaning_en: [],
+          examples: [
+            {
+              de: germanTranslation,
+              fa: item.term,
+              note: null,
+            }
+          ],
+          synonyms: [],
+          antonyms: [],
+          collocations: [],
+          register_note: null,
+          grammar: {},
+          learning_tips: [],
+        };
+
+        const { error: cardError } = await supabase.from('cards').insert({
+          user_id: user.id,
+          term: item.term,
+          term_normalized: item.term_normalized,
+          level: 'B1',
+          pos: 'phrase',
+          box: 1,
+          due_date: new Date().toISOString().split('T')[0],
+          back_json: cardBack,
+          direction: 'fa-de',
+        });
+
+        if (cardError) {
+          if (cardError.code === '23505') {
+            toast.error('This card already exists');
+          } else {
+            toast.error('Error creating card');
+            console.error('Error creating card:', cardError);
+          }
+          setConverting(null);
+          return;
+        }
+
+        // Delete from backlog
+        await supabase.from('backlog').delete().eq('id', item.id);
+        
+        toast.success(t.backlog.cardCreated);
+        loadBacklog();
+      } catch (error) {
+        toast.error(t.backlog.cardError);
+        console.error('Error converting Persian card:', error);
+      } finally {
+        setConverting(null);
+      }
+      return;
+    }
+
+    // For German words, use AI generation
+    setShowAILoading(true);
     try {
       const result = await completeBacklogToCardAction(item.id, 'ai');
 
@@ -340,7 +473,7 @@ export default function BacklogPage() {
         {/* German Words Form */}
         {activeTab === 'german' && (
           <Card padding="md">
-            <form onSubmit={handleAddToBacklog} className="flex gap-3">
+            <form onSubmit={handleAddGermanToBacklog} className="flex gap-3">
               <div className="flex-1">
                 <Input
                   value={newTerm}
@@ -426,21 +559,23 @@ export default function BacklogPage() {
           </Card>
         )}
 
-        {/* Backlog list - Only shown in German tab */}
-        {activeTab === 'german' && (
-          <>
-            {backlog.length === 0 ? (
-              <Card padding="lg" className="text-center py-16">
-                <CardContent>
-                  <div className="text-4xl mb-4">📝</div>
-                  <p className="text-text-muted">
-                    {t.backlog.emptyBacklog}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {backlog.map((item) => (
+        {/* Backlog list */}
+        {backlog.filter(item => 
+          activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
+        ).length === 0 ? (
+          <Card padding="lg" className="text-center py-16">
+            <CardContent>
+              <div className="text-4xl mb-4">📝</div>
+              <p className="text-text-muted">
+                {t.backlog.emptyBacklog}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {backlog.filter(item => 
+              activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
+            ).map((item) => (
               <Card key={item.id} padding="md">
                 <CardContent className="space-y-3">
                   {/* Term and date */}
@@ -464,32 +599,47 @@ export default function BacklogPage() {
 
                   {/* Action buttons - stack on mobile */}
                   <div className="flex gap-2">
-                    <Button
-                      variant="success"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleConvertToCard(item)}
-                      disabled={converting === item.id || availableSlots === 0}
-                      loading={converting === item.id}
-                    >
-                      ✨ {t.backlog.aiComplete}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => handleManualCard(item)}
-                      disabled={converting === item.id || availableSlots === 0}
-                    >
-                      ✏️ {t.backlog.manual}
-                    </Button>
+                    {item.direction === 'fa-de' ? (
+                      // Persian sentence - simple create card button
+                      <Button
+                        variant="success"
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => handleConvertToCard(item)}
+                        disabled={converting === item.id || availableSlots === 0}
+                        loading={converting === item.id}
+                      >
+                        ➕ Create Card
+                      </Button>
+                    ) : (
+                      // German word - AI and Manual options
+                      <>
+                        <Button
+                          variant="success"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleConvertToCard(item)}
+                          disabled={converting === item.id || availableSlots === 0}
+                          loading={converting === item.id}
+                        >
+                          ✨ {t.backlog.aiComplete}
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="flex-1"
+                          onClick={() => handleManualCard(item)}
+                          disabled={converting === item.id || availableSlots === 0}
+                        >
+                          ✏️ {t.backlog.manual}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             ))}
-              </div>
-            )}
-          </>
+          </div>
         )}
 
         {/* Batch Generate Dialog */}
@@ -532,7 +682,8 @@ export default function BacklogPage() {
           germanText={germanTranslation}
           onPersianChange={setPersianSentence}
           onGermanChange={setGermanTranslation}
-          onSave={handleSavePersianCard}
+          onAddToBacklog={handleAddPersianToBacklog}
+          onCreateCardNow={handleCreateCardNow}
         />
       </div>
     </div>

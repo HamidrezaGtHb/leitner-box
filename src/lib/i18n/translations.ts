@@ -178,6 +178,7 @@ export const translations = {
       translationError: 'Translation failed',
       saveCard: 'Save Card',
       editBothSides: 'Edit both sides before saving',
+      createCardNow: 'Create Card Now',
     },
 
     // Study page
@@ -507,6 +508,7 @@ export const translations = {
       translationError: 'Übersetzung fehlgeschlagen',
       saveCard: 'Karte speichern',
       editBothSides: 'Beide Seiten vor dem Speichern bearbeiten',
+      createCardNow: 'Karte jetzt erstellen',
     },
 
     // Study page
