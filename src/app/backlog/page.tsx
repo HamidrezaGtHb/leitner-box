@@ -52,6 +52,7 @@ export default function BacklogPage() {
       .from('backlog')
       .select('id, user_id, term, term_normalized, level, pos, topic, direction, created_at')
       .eq('user_id', user.id)
+      .eq('direction', 'de-fa') // Only show German words in backlog list
       .order('created_at', { ascending: false });
 
     setBacklog(data || []);
@@ -161,24 +162,60 @@ export default function BacklogPage() {
       return;
     }
 
+    // Check available slots
+    const slotsData = await calculateAvailableNewCardSlots(supabase, user.id);
+    if (slotsData.availableSlots <= 0) {
+      toast.error('Daily limit reached. Review existing cards first.');
+      return;
+    }
+
     const normalized = normalizeTerm(persianSentence);
 
-    const { error } = await supabase.from('backlog').insert({
+    // Create card directly (skip backlog)
+    const cardBack = {
+      term: persianSentence.trim(),
+      language: 'de' as const,
+      level: 'B1',
+      pos: 'phrase' as const,
+      ipa: null,
+      meaning_fa: [germanTranslation.trim()],
+      meaning_en: [],
+      examples: [
+        {
+          de: germanTranslation.trim(),
+          fa: persianSentence.trim(),
+          note: null,
+        }
+      ],
+      synonyms: [],
+      antonyms: [],
+      collocations: [],
+      register_note: null,
+      grammar: {},
+      learning_tips: [],
+    };
+
+    const { error } = await supabase.from('cards').insert({
       user_id: user.id,
       term: persianSentence.trim(),
       term_normalized: normalized,
+      level: 'B1',
+      pos: 'phrase',
+      box: 1,
+      due_date: new Date().toISOString().split('T')[0],
+      back_json: cardBack,
       direction: 'fa-de',
     });
 
     if (error) {
       if (error.code === '23505') {
-        toast.error(t.backlog.alreadyInBacklog);
+        toast.error('This card already exists');
       } else {
-        toast.error(t.backlog.addError);
-        console.error('Error adding to backlog:', error);
+        toast.error('Error creating card');
+        console.error('Error creating card:', error);
       }
     } else {
-      toast.success(t.backlog.addedToBacklog);
+      toast.success(t.backlog.cardCreated);
       setPersianSentence('');
       setGermanTranslation('');
       setShowPreviewDialog(false);
@@ -389,23 +426,21 @@ export default function BacklogPage() {
           </Card>
         )}
 
-        {/* Backlog list */}
-        {backlog.filter(item => 
-          activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
-        ).length === 0 ? (
-          <Card padding="lg" className="text-center py-16">
-            <CardContent>
-              <div className="text-4xl mb-4">📝</div>
-              <p className="text-text-muted">
-                {t.backlog.emptyBacklog}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {backlog.filter(item => 
-              activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
-            ).map((item) => (
+        {/* Backlog list - Only shown in German tab */}
+        {activeTab === 'german' && (
+          <>
+            {backlog.length === 0 ? (
+              <Card padding="lg" className="text-center py-16">
+                <CardContent>
+                  <div className="text-4xl mb-4">📝</div>
+                  <p className="text-text-muted">
+                    {t.backlog.emptyBacklog}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {backlog.map((item) => (
               <Card key={item.id} padding="md">
                 <CardContent className="space-y-3">
                   {/* Term and date */}
@@ -452,7 +487,9 @@ export default function BacklogPage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Batch Generate Dialog */}
