@@ -358,11 +358,60 @@ export default function TodayPage() {
                   {/* Scrollable Content */}
                   <div className="flex-1 space-y-3 overflow-y-auto pr-1">
                     {currentCard.direction === 'fa-de' ? (
-                      // For Persian→German cards, show Persian meaning
-                      <div className="text-center">
-                        <div className="text-base text-text" dir="rtl">
-                          {currentCard.term}
+                      // For Persian→German cards, show focused minimalist content
+                      <div className="space-y-3">
+                        {/* Level and Register badges */}
+                        <div className="flex justify-center gap-2 flex-wrap">
+                          {currentCard.back_json.level && (
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs font-semibold">
+                              {currentCard.back_json.level}
+                            </span>
+                          )}
+                          {currentCard.back_json.register_note && (
+                            <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                              currentCard.back_json.register_note === 'formal' 
+                                ? 'bg-purple-100 text-purple-800' 
+                                : currentCard.back_json.register_note === 'informal'
+                                ? 'bg-orange-100 text-orange-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {currentCard.back_json.register_note === 'formal' ? 'Formal' : 
+                               currentCard.back_json.register_note === 'informal' ? 'Informal' : 'Neutral'}
+                            </span>
+                          )}
                         </div>
+
+                        {/* German translations */}
+                        {currentCard.back_json.meaning_fa.length > 0 && (
+                          <div>
+                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                              Translations
+                            </div>
+                            <ul className="space-y-1">
+                              {currentCard.back_json.meaning_fa.map((meaning, i) => (
+                                <li key={i} className="text-sm text-text flex items-start gap-2">
+                                  <span className="text-accent mt-0.5">•</span>
+                                  <span>{meaning}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Examples */}
+                        {currentCard.back_json.examples.length > 0 && (
+                          <div>
+                            <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                              Examples
+                            </div>
+                            {currentCard.back_json.examples.map((ex, i) => (
+                              <div key={i} className="mb-2 p-2.5 bg-surface-2 rounded-xl">
+                                <div className="text-text font-medium text-sm mb-1">{ex.de}</div>
+                                <div className="text-text-muted text-xs" dir="rtl">{ex.fa}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       // For German→Persian cards, show all details

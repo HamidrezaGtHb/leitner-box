@@ -84,6 +84,9 @@ export function PersianCardPreviewDialog({
             <label className="block text-sm font-medium text-text">
               {t.backlog.backGerman}
             </label>
+            <p className="text-xs text-text-muted">
+              You can edit this translation. AI will generate multiple variations and examples when creating the card.
+            </p>
             <textarea
               value={localGerman}
               onChange={(e) => setLocalGerman(e.target.value)}
