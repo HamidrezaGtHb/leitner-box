@@ -79,7 +79,7 @@ export default function TodayPage() {
     // Load all due cards - ordered by box ascending (1 → 5), then by due_date
     const { data, error } = await supabase
       .from('cards')
-      .select('id, user_id, term, term_normalized, level, pos, box, due_date, back_json, created_at, updated_at')
+      .select('id, user_id, term, term_normalized, level, pos, box, due_date, back_json, direction, created_at, updated_at')
       .eq('user_id', user.id)
       .lte('due_date', today)
       .order('box', { ascending: true })
@@ -280,14 +280,24 @@ export default function TodayPage() {
               >
                 <CardContent className="flex-1 flex flex-col items-center justify-center text-center">
                   <div className="space-y-4">
-                    {article && <ArticleBadge article={article} size="lg" />}
+                    {currentCard.direction === 'de-fa' && article && <ArticleBadge article={article} size="lg" />}
                     <div className="flex items-center justify-center gap-2">
-                      <div className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
+                      <div 
+                        className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}
+                        dir={currentCard.direction === 'fa-de' ? 'rtl' : 'ltr'}
+                      >
                         {currentCard.term}
                       </div>
                       <div className="flex items-center gap-1">
-                        <SpeakButton text={article ? `${article} ${currentCard.term}` : currentCard.term} lang="de-DE" size="md" />
-                        <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                        <SpeakButton 
+                          text={currentCard.direction === 'de-fa' ? (article ? `${article} ${currentCard.term}` : currentCard.term) : currentCard.term} 
+                          lang={currentCard.direction === 'de-fa' ? 'de-DE' : 'fa-IR'} 
+                          size="md" 
+                        />
+                        <CopyButton 
+                          text={currentCard.direction === 'de-fa' ? (article ? `${article} ${currentCard.term}` : currentCard.term) : currentCard.term} 
+                          size="md" 
+                        />
                       </div>
                     </div>
                     <div className="text-sm text-text-muted">
@@ -315,34 +325,59 @@ export default function TodayPage() {
                 <CardContent className="flex-1 flex flex-col overflow-hidden">
                   {/* Term Header */}
                   <div className="text-center pb-3 border-b mb-3 shrink-0">
-                    <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
-                      {article && <ArticleBadge article={article} size="md" />}
-                      <span className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
-                        {currentCard.term}
-                      </span>
-                      <div className="flex items-center gap-1">
-                        <SpeakButton text={article ? `${article} ${currentCard.term}` : currentCard.term} lang="de-DE" size="md" />
-                        <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                    {currentCard.direction === 'fa-de' ? (
+                      // For Persian→German cards, show German on back
+                      <div>
+                        <div className={`${getTermFontSize(currentCard.back_json.examples[0]?.de || '')} font-bold text-text break-words max-w-full mb-2`}>
+                          {currentCard.back_json.examples[0]?.de || currentCard.back_json.meaning_fa.join(', ')}
+                        </div>
+                        {currentCard.back_json.ipa && (
+                          <span className="font-mono text-xs text-accent">[{currentCard.back_json.ipa}]</span>
+                        )}
                       </div>
-                    </div>
-                    {currentCard.back_json.ipa && (
-                      <span className="font-mono text-xs text-accent">[{currentCard.back_json.ipa}]</span>
+                    ) : (
+                      // For German→Persian cards (original behavior)
+                      <>
+                        <div className="flex items-center justify-center gap-2 mb-1 flex-wrap">
+                          {article && <ArticleBadge article={article} size="md" />}
+                          <span className={`${getTermFontSize(currentCard.term)} font-bold text-text break-words max-w-full`}>
+                            {currentCard.term}
+                          </span>
+                          <div className="flex items-center gap-1">
+                            <SpeakButton text={article ? `${article} ${currentCard.term}` : currentCard.term} lang="de-DE" size="md" />
+                            <CopyButton text={article ? `${article} ${currentCard.term}` : currentCard.term} size="md" />
+                          </div>
+                        </div>
+                        {currentCard.back_json.ipa && (
+                          <span className="font-mono text-xs text-accent">[{currentCard.back_json.ipa}]</span>
+                        )}
+                      </>
                     )}
                   </div>
 
                   {/* Scrollable Content */}
                   <div className="flex-1 space-y-3 overflow-y-auto pr-1">
-                    {/* Meanings */}
-                    <div>
-                      <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
-                        {t.today.meanings}
+                    {currentCard.direction === 'fa-de' ? (
+                      // For Persian→German cards, show Persian meaning
+                      <div className="text-center">
+                        <div className="text-base text-text" dir="rtl">
+                          {currentCard.term}
+                        </div>
                       </div>
-                      <ul className="space-y-0.5">
-                        {currentCard.back_json.meaning_fa.map((meaning, i) => (
-                          <li key={i} className="text-text text-base">• {meaning}</li>
-                        ))}
-                      </ul>
-                    </div>
+                    ) : (
+                      // For German→Persian cards, show all details
+                      <>
+                        {/* Meanings */}
+                        <div>
+                          <div className="text-xs font-semibold text-text-muted uppercase tracking-wide mb-1">
+                            {t.today.meanings}
+                          </div>
+                          <ul className="space-y-0.5">
+                            {currentCard.back_json.meaning_fa.map((meaning, i) => (
+                              <li key={i} className="text-text text-base">• {meaning}</li>
+                            ))}
+                          </ul>
+                        </div>
 
                     {/* Grammar: Noun */}
                     {currentCard.back_json.grammar.noun?.plural && (
@@ -504,6 +539,8 @@ export default function TodayPage() {
                           )}
                         </div>
                       </div>
+                    )}
+                      </>
                     )}
                   </div>
 

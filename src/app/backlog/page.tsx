@@ -11,6 +11,7 @@ import { OCRUploadDialog } from '@/components/ocr-upload-dialog';
 import { CSVImportDialog } from '@/components/csv-import-dialog';
 import { ManualCardDialog } from '@/components/manual-card-dialog';
 import { AILoadingModal } from '@/components/ai-loading-modal';
+import { PersianCardPreviewDialog } from '@/components/persian-card-preview-dialog';
 import { Button, Card, CardContent, Input } from '@/components/ui';
 import { useLanguage } from '@/lib/i18n';
 import toast from 'react-hot-toast';
@@ -29,6 +30,11 @@ export default function BacklogPage() {
   const [availableSlots, setAvailableSlots] = useState(0);
   const [dailyLimit, setDailyLimit] = useState(10);
   const [box1DueToday, setBox1DueToday] = useState(0);
+  const [activeTab, setActiveTab] = useState<'german' | 'persian'>('german');
+  const [persianSentence, setPersianSentence] = useState('');
+  const [germanTranslation, setGermanTranslation] = useState('');
+  const [showPreviewDialog, setShowPreviewDialog] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
   const supabase = createClient();
   const { t } = useLanguage();
 
@@ -44,7 +50,7 @@ export default function BacklogPage() {
 
     const { data } = await supabase
       .from('backlog')
-      .select('id, user_id, term, term_normalized, level, pos, topic, created_at')
+      .select('id, user_id, term, term_normalized, level, pos, topic, direction, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
@@ -90,6 +96,7 @@ export default function BacklogPage() {
       user_id: user.id,
       term: newTerm.trim(),
       term_normalized: normalized,
+      direction: 'de-fa',
     });
 
     if (error) {
@@ -102,6 +109,79 @@ export default function BacklogPage() {
     } else {
       toast.success(t.backlog.addedToBacklog);
       setNewTerm('');
+      loadBacklog();
+    }
+  };
+
+  const handleAddPersianSentence = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!persianSentence.trim()) return;
+
+    // Show preview dialog
+    setShowPreviewDialog(true);
+  };
+
+  const handleTranslateWithAI = async () => {
+    if (!persianSentence.trim()) {
+      toast.error('Please enter a Persian sentence first');
+      return;
+    }
+
+    setIsTranslating(true);
+    try {
+      // Import the translation action dynamically to avoid circular dependencies
+      const { translatePersianToGermanAction } = await import('@/app/actions/ai-actions');
+      const result = await translatePersianToGermanAction(persianSentence);
+
+      if (result.success) {
+        setGermanTranslation(result.german);
+        setShowPreviewDialog(true);
+      } else {
+        toast.error(result.error);
+      }
+    } catch (error) {
+      console.error('Translation error:', error);
+      toast.error(t.backlog.translationError);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
+  const handleSavePersianCard = async () => {
+    if (!persianSentence.trim() || !germanTranslation.trim()) {
+      toast.error(t.backlog.editBothSides);
+      return;
+    }
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      toast.error(t.errors.pleaseLogin);
+      return;
+    }
+
+    const normalized = normalizeTerm(persianSentence);
+
+    const { error } = await supabase.from('backlog').insert({
+      user_id: user.id,
+      term: persianSentence.trim(),
+      term_normalized: normalized,
+      direction: 'fa-de',
+    });
+
+    if (error) {
+      if (error.code === '23505') {
+        toast.error(t.backlog.alreadyInBacklog);
+      } else {
+        toast.error(t.backlog.addError);
+        console.error('Error adding to backlog:', error);
+      }
+    } else {
+      toast.success(t.backlog.addedToBacklog);
+      setPersianSentence('');
+      setGermanTranslation('');
+      setShowPreviewDialog(false);
       loadBacklog();
     }
   };
@@ -196,26 +276,90 @@ export default function BacklogPage() {
           </div>
         </div>
 
-        {/* Add form */}
-        <Card padding="md">
-          <form onSubmit={handleAddToBacklog} className="flex gap-3">
-            <div className="flex-1">
-              <Input
-                value={newTerm}
-                onChange={(e) => setNewTerm(e.target.value)}
-                placeholder={t.backlog.inputPlaceholder}
-                inputSize="md"
+        {/* Tabs for German/Persian */}
+        <div className="flex gap-2 border-b border-border">
+          <button
+            onClick={() => setActiveTab('german')}
+            className={`px-6 py-3 text-sm font-medium transition-colors min-h-[44px] ${
+              activeTab === 'german'
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-text'
+            }`}
+          >
+            {t.backlog.germanWords}
+          </button>
+          <button
+            onClick={() => setActiveTab('persian')}
+            className={`px-6 py-3 text-sm font-medium transition-colors min-h-[44px] ${
+              activeTab === 'persian'
+                ? 'text-accent border-b-2 border-accent'
+                : 'text-text-muted hover:text-text'
+            }`}
+          >
+            {t.backlog.persianSentences}
+          </button>
+        </div>
+
+        {/* German Words Form */}
+        {activeTab === 'german' && (
+          <Card padding="md">
+            <form onSubmit={handleAddToBacklog} className="flex gap-3">
+              <div className="flex-1">
+                <Input
+                  value={newTerm}
+                  onChange={(e) => setNewTerm(e.target.value)}
+                  placeholder={t.backlog.inputPlaceholder}
+                  inputSize="md"
+                />
+              </div>
+              <Button
+                type="submit"
+                variant="primary"
+                size="md"
+                className="min-h-[44px]"
+              >
+                {t.common.add}
+              </Button>
+            </form>
+          </Card>
+        )}
+
+        {/* Persian Sentences Form */}
+        {activeTab === 'persian' && (
+          <Card padding="md">
+            <form onSubmit={handleAddPersianSentence} className="space-y-3">
+              <textarea
+                value={persianSentence}
+                onChange={(e) => setPersianSentence(e.target.value)}
+                placeholder={t.backlog.persianPlaceholder}
+                className="w-full px-4 py-3 text-base bg-input border border-border rounded-lg text-text placeholder:text-text-muted focus:outline-none focus:ring-2 focus:ring-accent resize-none"
+                rows={3}
+                dir="rtl"
               />
-            </div>
-            <Button
-              type="submit"
-              variant="primary"
-              size="md"
-            >
-              {t.common.add}
-            </Button>
-          </form>
-        </Card>
+              <div className="flex gap-2 flex-wrap">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  size="md"
+                  className="min-h-[44px] flex-1 sm:flex-none"
+                  disabled={!persianSentence.trim()}
+                >
+                  {t.backlog.addToBacklog}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  className="min-h-[44px] flex-1 sm:flex-none"
+                  onClick={handleTranslateWithAI}
+                  disabled={!persianSentence.trim() || isTranslating}
+                >
+                  {isTranslating ? t.backlog.translating : `🤖 ${t.backlog.translateWithAI}`}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        )}
 
         {/* Info message */}
         {backlog.length > 0 && (
@@ -246,7 +390,9 @@ export default function BacklogPage() {
         )}
 
         {/* Backlog list */}
-        {backlog.length === 0 ? (
+        {backlog.filter(item => 
+          activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
+        ).length === 0 ? (
           <Card padding="lg" className="text-center py-16">
             <CardContent>
               <div className="text-4xl mb-4">📝</div>
@@ -257,7 +403,9 @@ export default function BacklogPage() {
           </Card>
         ) : (
           <div className="space-y-3">
-            {backlog.map((item) => (
+            {backlog.filter(item => 
+              activeTab === 'german' ? item.direction === 'de-fa' : item.direction === 'fa-de'
+            ).map((item) => (
               <Card key={item.id} padding="md">
                 <CardContent className="space-y-3">
                   {/* Term and date */}
@@ -338,6 +486,17 @@ export default function BacklogPage() {
 
         {/* AI Loading Modal */}
         <AILoadingModal open={showAILoading} estimatedTime={8} />
+
+        {/* Persian Card Preview Dialog */}
+        <PersianCardPreviewDialog
+          open={showPreviewDialog}
+          onOpenChange={setShowPreviewDialog}
+          persianText={persianSentence}
+          germanText={germanTranslation}
+          onPersianChange={setPersianSentence}
+          onGermanChange={setGermanTranslation}
+          onSave={handleSavePersianCard}
+        />
       </div>
     </div>
   );

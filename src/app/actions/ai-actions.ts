@@ -215,6 +215,7 @@ export async function completeBacklogToCardAction(
       box: 1,
       due_date: new Date().toISOString().split('T')[0], // Due today
       back_json: cardBack,
+      direction: backlogItem.direction || 'de-fa',
     });
 
     if (insertError) {
@@ -360,6 +361,72 @@ export async function addTermToBacklogAction(
     return {
       success: false,
       error: getErrorMessage(error, 'en'),
+    };
+  }
+}
+
+/**
+ * Server Action: Translate Persian to German
+ */
+export async function translatePersianToGermanAction(
+  persianText: string
+): Promise<{ success: true; german: string } | { success: false; error: string }> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        error: ErrorMessages.AUTH_UNAUTHORIZED.en,
+      };
+    }
+
+    // Get user's API key or use default
+    const userApiKey = await getUserApiKey(supabase, user.id);
+    const apiKey = userApiKey || process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      return {
+        success: false,
+        error: 'No API key available. Please set your Gemini API key in Settings.',
+      };
+    }
+
+    // Use Gemini to translate
+    const { GoogleGenerativeAI } = await import('@google/generative-ai');
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+
+    const prompt = `Translate the following Persian sentence to natural, conversational German at B2-C1 level.
+The German should sound natural and be appropriate for everyday conversation or professional contexts.
+
+Persian sentence: "${persianText}"
+
+Reply with ONLY the German translation, nothing else.`;
+
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const germanTranslation = response.text().trim();
+
+    if (!germanTranslation) {
+      return {
+        success: false,
+        error: 'Translation failed. Please try again.',
+      };
+    }
+
+    return {
+      success: true,
+      german: germanTranslation,
+    };
+  } catch (error: any) {
+    console.error('translatePersianToGermanAction error:', error);
+    return {
+      success: false,
+      error: error.message || 'Translation failed. Please try again.',
     };
   }
 }

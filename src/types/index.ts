@@ -4,6 +4,8 @@ export type Level = 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | 'C2';
 
 export type Register = 'formal' | 'informal' | 'colloquial' | 'general';
 
+export type CardDirection = 'de-fa' | 'fa-de';
+
 export interface CardBackJSON {
   term: string;
   language: 'de';
@@ -65,6 +67,7 @@ export interface Card {
   box: number;
   due_date: string;
   back_json: CardBackJSON;
+  direction: CardDirection;
   created_at: string;
   updated_at: string;
 }
@@ -77,6 +80,7 @@ export interface BacklogItem {
   level: string | null;
   pos: string | null;
   topic: string | null;
+  direction: CardDirection;
   created_at: string;
 }
 

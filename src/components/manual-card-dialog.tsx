@@ -96,6 +96,7 @@ export function ManualCardDialog({
         box: 1,
         due_date: new Date().toISOString().split('T')[0],
         back_json: cardBack,
+        direction: item.direction || 'de-fa',
       });
 
       if (insertError) {
