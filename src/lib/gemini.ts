@@ -34,7 +34,7 @@ async function generateJson<T>(
   maxRetries = 1
 ): Promise<T> {
   const genAI = getGeminiAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
   let lastError: any;
   

@@ -404,7 +404,7 @@ export async function translatePersianToGermanAction(
     // Use Gemini to translate
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `Translate the following Persian sentence to natural, conversational German at B2-C1 level.
 The German should sound natural and be appropriate for everyday conversation or professional contexts.
@@ -479,7 +479,7 @@ export async function generatePersianCardBackAction(
     // Use Gemini to generate comprehensive card back
     const { GoogleGenerativeAI } = await import('@google/generative-ai');
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `You are a German language teacher creating flashcard content for Persian speakers learning German.
 
