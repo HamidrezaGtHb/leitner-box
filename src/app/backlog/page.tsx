@@ -82,13 +82,13 @@ export default function BacklogPage() {
     // Check if already exists in cards or backlog
     const { data: existingCard } = await supabase
       .from('cards')
-      .select('id')
+      .select('id, box')
       .eq('user_id', user.id)
       .eq('term_normalized', normalized)
-      .single();
+      .maybeSingle();
 
     if (existingCard) {
-      toast.error(t.backlog.alreadyInCards);
+      toast.error(`${t.backlog.alreadyInCards} (Box ${existingCard.box})`);
       return;
     }
     

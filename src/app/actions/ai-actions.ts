@@ -279,7 +279,11 @@ export async function batchGenerateTermsAction(
       ...(backlog?.map((b) => b.term_normalized) || []),
     ];
 
+    // Get user's personal API key (if set)
+    const apiKey = await getUserApiKey(supabase, user.id);
+
     const results: NewTermResponse[] = [];
+    let lastGenerationError: string | null = null;
 
     // Generate terms one by one (to avoid duplicates in the batch itself)
     for (let i = 0; i < count; i++) {
@@ -289,12 +293,14 @@ export async function batchGenerateTermsAction(
           pos,
           topic,
           existingTerms,
+          apiKey,
         });
         results.push(result);
         // Add to existing terms to avoid duplicates in next iteration
         existingTerms.push(result.term_normalized);
       } catch (error) {
         console.error(`Failed to generate term ${i + 1}:`, error);
+        lastGenerationError = getErrorMessage(error, 'en');
         // Continue with next term
       }
     }
@@ -302,7 +308,7 @@ export async function batchGenerateTermsAction(
     if (results.length === 0) {
       return {
         success: false,
-        error: ErrorMessages.AI_GENERATION_FAILED.en,
+        error: lastGenerationError || ErrorMessages.AI_GENERATION_FAILED.en,
       };
     }
 
